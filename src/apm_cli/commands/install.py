@@ -57,6 +57,7 @@ from apm_cli.install.package_resolution import (
     apply_cli_skill_pin,
     cli_skill_subset,
     dependency_reference_to_yaml_entry,
+    normalize_github_skill_url_packages,
     persist_dependency_list_if_changed,
     propagate_existing_registry_source,
     resolve_parsed_dependency_reference,
@@ -262,6 +263,8 @@ def _resolve_package_references(
     skill_subset=None,
     skill_subset_from_cli=False,
     default_registry=None,
+    package_skill_subsets=None,
+    initial_invalid_outcomes=None,
 ):
     """Validate, canonicalize, and resolve package references.
 
@@ -278,7 +281,7 @@ def _resolve_package_references(
     from ..install.registry_wiring import should_skip_github_probe_for_dep, validate_registry_ref
 
     valid_outcomes = []  # (canonical, already_present) tuples
-    invalid_outcomes = []  # (package, reason) tuples
+    invalid_outcomes = list(initial_invalid_outcomes or [])  # (package, reason) tuples
     _marketplace_provenance = {}  # canonical -> {discovered_via, marketplace_plugin_name}
     _apm_yml_entries = {}  # canonical -> apm.yml entry (str or dict for HTTP deps)
     validated_packages = []
@@ -286,7 +289,9 @@ def _resolve_package_references(
     manifest_identities = builtins.set(existing_identities)
 
     if logger:
-        logger.validation_start(len(packages))
+        logger.validation_start(len(packages) + len(invalid_outcomes))
+        for package, reason in invalid_outcomes:
+            logger.validation_fail(package, reason)
 
     for package in packages:
         # --- Marketplace pre-parse intercept ---
@@ -393,10 +398,21 @@ def _resolve_package_references(
                 dependency_reference_cls=DependencyReference,
                 logger=logger,
             )
+            package_skill_subset = (
+                package_skill_subsets.get(package) if package_skill_subsets else None
+            )
+            effective_skill_subset = skill_subset
+            if package_skill_subset:
+                if effective_skill_subset:
+                    effective_skill_subset = builtins.tuple(
+                        sorted({*effective_skill_subset, *package_skill_subset})
+                    )
+                else:
+                    effective_skill_subset = package_skill_subset
             apply_cli_skill_pin(
                 dep_ref,
-                skill_subset,
-                skill_subset_from_cli,
+                effective_skill_subset,
+                skill_subset_from_cli or bool(package_skill_subset),
                 current_deps,
                 _apm_yml_entries,
                 dependency_reference_cls=DependencyReference,
@@ -433,8 +449,6 @@ def _resolve_package_references(
                 logger.validation_fail(package, scope_reject)
             continue
 
-        if skill_subset and canonical not in _apm_yml_entries:
-            _apm_yml_entries[canonical] = dep_ref.to_apm_yml_entry()
         _apm_yml_entries.setdefault(canonical, dep_ref.to_apm_yml_entry())
 
         # Check if package is already in dependencies (by identity)
@@ -619,6 +633,11 @@ def _validate_and_add_packages_to_apm_yml(
         data[dep_section]["apm"] = []
 
     current_deps = data[dep_section]["apm"] or []
+    (
+        normalized_packages,
+        package_skill_subsets,
+        package_normalization_errors,
+    ) = normalize_github_skill_url_packages(packages)
 
     # Detect duplicates against existing deps
     existing_identities = _check_package_conflicts(current_deps)
@@ -632,7 +651,7 @@ def _validate_and_add_packages_to_apm_yml(
         _apm_yml_entries,
         dependencies_changed,
     ) = _resolve_package_references(
-        packages,
+        normalized_packages,
         current_deps,
         existing_identities,
         auth_resolver=auth_resolver,
@@ -642,6 +661,8 @@ def _validate_and_add_packages_to_apm_yml(
         skill_subset=skill_subset,
         skill_subset_from_cli=skill_subset_from_cli,
         default_registry=_default_registry_for_cli,
+        package_skill_subsets=package_skill_subsets,
+        initial_invalid_outcomes=package_normalization_errors,
     )
 
     outcome = _ValidationOutcome(
