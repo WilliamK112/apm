@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Windows binary is now Authenticode-signed in the release workflow, eliminating
   the `Trojan:Script/Wacatac.H!ml` Windows Defender false positive on unsigned
   PyInstaller bundles. (#2435)
+- Cursor instruction output now ports explicit universal `applyTo: "**"` to
+  `alwaysApply: true` instead of `globs: "**"`, preserving always-on intent
+  while leaving scoped globs unchanged. (#1744)
 - Multi-target `apm compile` now avoids repeating expensive project analysis
   for each target, making multi-target runs scale like single-target runs
   without changing generated output. (closes #2482)

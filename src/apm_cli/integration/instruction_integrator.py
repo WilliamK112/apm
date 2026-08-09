@@ -486,9 +486,10 @@ class InstructionIntegrator(BaseIntegrator):
     def _convert_to_cursor_rules(content: str) -> str:
         """Convert APM instruction content to Cursor Rules ``.mdc`` format.
 
-        Parses existing YAML frontmatter, maps ``applyTo`` → ``globs``,
+        Parses existing YAML frontmatter, maps ``applyTo`` to ``globs``,
         extracts or generates a ``description``, and rewrites the
-        frontmatter in Cursor's expected format.
+        frontmatter in Cursor's expected format. Explicit universal
+        ``applyTo: "**"`` becomes ``alwaysApply: true`` instead of a glob.
         """
         body = content
         apply_to = ""
@@ -519,7 +520,9 @@ class InstructionIntegrator(BaseIntegrator):
         if description:
             parts.append(f"description: {description}")
         globs = parse_apply_to(apply_to)
-        if len(globs) == 1:
+        if globs == ["**"]:
+            parts.append("alwaysApply: true")
+        elif len(globs) == 1:
             parts.append(f"globs: {yaml_double_quote(globs[0])}")
         elif globs:
             parts.append("globs:")

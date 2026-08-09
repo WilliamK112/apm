@@ -1274,12 +1274,23 @@
       "tests": [
         "tests/spec_conformance/test_manifest_reqs.py::test_project_scoped_native_hook_command_is_portably_anchored"
       ]
+    },
+    {
+      "conformance_class": "consumer",
+      "id": "req-tg-011",
+      "keyword": "MUST",
+      "section": "8.5.5",
+      "status": "active",
+      "test_count": 1,
+      "tests": [
+        "tests/spec_conformance/test_manifest_reqs.py::test_consumer_preserves_cursor_universal_instruction_intent"
+      ]
     }
   ],
   "spec_version": "v0.1.1",
   "summary_by_class": {
     "consumer": {
-      "active": 82,
+      "active": 83,
       "skipped": 1,
       "unbound": 0,
       "xfail": 0
@@ -1303,5 +1314,5 @@
       "xfail": 0
     }
   },
-  "total_requirements": 112
+  "total_requirements": 113
 }

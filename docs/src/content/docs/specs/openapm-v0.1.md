@@ -136,7 +136,7 @@ between the companion corpus and the implementation.
 
 ### 1.3 Document conventions
 
-- OpenAPM v0.1 carries **110 normative statements** indexed in
+- OpenAPM v0.1 carries **113 normative statements** indexed in
   [Appendix C](#appendix-c-index-of-normative-statements).
 - All on-disk files defined by this specification are **YAML 1.2**
   parsed under the safe subset defined in
@@ -2469,6 +2469,20 @@ cause the target shell to reinterpret a path component.
 > PowerShell commands. This requirement permits target-specific command syntax;
 > it does not prescribe a shell for other targets.
 
+#### 8.5.5 Cursor universal instruction intent
+
+<a id="req-tg-011"></a>
+**[req-tg-011]** A conforming **consumer** implementation that deploys an
+instruction primitive for the `cursor` target MUST write the target-native
+rule under `.cursor/rules/<name>.mdc`. When the source instruction's
+normalized `applyTo` value resolves to exactly one universal `**` glob, the
+emitted frontmatter MUST contain `alwaysApply: true` and MUST NOT contain a
+`globs` field. For any other non-empty `applyTo` set, the emitted frontmatter
+MUST NOT contain `alwaysApply: true` and MUST encode the source patterns in
+`globs`; a single pattern MUST be a YAML scalar and two or more patterns MUST
+be a YAML block sequence. When `applyTo` is absent or empty, the emitted
+frontmatter MUST omit both `alwaysApply` and `globs`.
+
 ### 8.6 Per-target primitive support (informational)
 
 The matrix of which primitive types each target supports is
@@ -2483,7 +2497,8 @@ without a spec revision. The current matrix is in the companion
   [req-tg-002](#req-tg-002), [req-tg-003](#req-tg-003),
   [req-tg-004](#req-tg-004), [req-tg-005](#req-tg-005),
   [req-tg-006](#req-tg-006), [req-tg-007](#req-tg-007),
-  [req-tg-008](#req-tg-008), [req-tg-009](#req-tg-009).
+  [req-tg-008](#req-tg-008), [req-tg-009](#req-tg-009),
+  [req-tg-010](#req-tg-010), [req-tg-011](#req-tg-011).
 
 ---
 
@@ -3045,7 +3060,8 @@ conformance statement identifying:
 [req-tg-004](#req-tg-004), [req-tg-005](#req-tg-005),
 [req-tg-006](#req-tg-006), [req-tg-007](#req-tg-007),
 [req-tg-008](#req-tg-008), [req-tg-009](#req-tg-009),
-[req-tg-010](#req-tg-010), [req-sc-001](#req-sc-001),
+[req-tg-010](#req-tg-010), [req-tg-011](#req-tg-011),
+[req-sc-001](#req-sc-001),
 [req-sc-002](#req-sc-002), [req-sc-003](#req-sc-003),
 [req-sc-004](#req-sc-004), [req-sc-005](#req-sc-005),
 [req-sc-006](#req-sc-006), [req-sc-007](#req-sc-007),
@@ -3478,6 +3494,7 @@ renumbering of conformance classes.
 | [req-tg-008](#req-tg-008)                | MUST    | 8.5.3   | consumer    |
 | [req-tg-009](#req-tg-009)                | MUST    | 8.5.1   | consumer    |
 | [req-tg-010](#req-tg-010)                | MUST    | 8.5.4   | consumer    |
+| [req-tg-011](#req-tg-011)                | MUST    | 8.5.5   | consumer    |
 | [req-sc-001](#req-sc-001)                | MUST    | 10.4    | consumer    |
 | [req-sc-002](#req-sc-002)                | MUST    | 10.9    | consumer    |
 | [req-sc-003](#req-sc-003)                | MUST    | 10.3    | consumer    |
@@ -3496,7 +3513,7 @@ renumbering of conformance classes.
 | [req-cf-001](#req-cf-001)                | MUST    | 12.5    | consumer    |
 | [req-cf-002](#req-cf-002)                | MUST    | 12.3    | consumer    |
 
-**Total normative statements: 112** (107 MUST, 5 SHOULD).
+**Total normative statements: 113** (108 MUST, 5 SHOULD).
 
 ---
 
@@ -3534,6 +3551,7 @@ renumbering of conformance classes.
 | 0.1.26  | 2026-08-03 | Spec-citation fold for VS Code OCI/Docker MCP runtime argument resolution (closes #2438). Added [req-mf-023] (Section 4.5, consumer MUST): a non-secret runtime variable resolves every `{name}` occurrence across package runtime and package arguments, an unresolved template is never written literally, and package-scoped secret metadata uses VS Code secret-input references instead of generated config bytes. Section 4.9, Section 11.3.2, and Appendix C updated. Statement count: 109 -> 110 (105 MUST, 5 SHOULD). |
 | 0.1.27  | 2026-08-03 | Spec-citation fold for object-form registry identity preservation on CLI-driven manifest updates (closes the PR #2166 Mode-B silent-extension gate). Added [req-mf-024] (Section 4.3.2, consumer MUST): a consumer MUST NOT silently rewrite an existing `id:`-form (registry-sourced) manifest entry into a `git:`-form entry when persisting a subsequent CLI-driven update (e.g. an additive `--skill` pin) for the same dependency identity; when a CLI-parsed reference is ambiguous about its source but an existing manifest entry for the same identity already resolves to the `registry` source, the existing entry's source MUST be honored, and an update that would otherwise replace a registry-sourced entry with a non-registry-shaped entry MUST be rejected with a diagnostic naming the identity. Section 4.9 and Section 11.3.2 Consumer enumerations and Appendix C updated. Statement count: 110 -> 111 (106 MUST, 5 SHOULD). |
 | 0.1.28  | 2026-08-06 | Spec-citation fold for per-invocation executable consent in non-interactive contexts (closes #1620 Mode-B silent-extension gate). Added [req-sc-014] (Section 10.15, consumer MUST): a consumer that supports a per-invocation consent flag for bin/ executable deployment MUST deny deployment by default when stdout is not a TTY, unless the operator has explicitly opted in for that invocation; an explicit opt-in overrides the non-interactive default and permits deployment; an explicit opt-out overrides the default and denies deployment even in a terminal; the allowExecutables policy gate [req-sc-009] is evaluated first and always takes precedence. Added row 19 to the Section 10.11 summary table. Section 11.3.2 Consumer enumeration and Appendix C updated. Statement count: 111 -> 112 (107 MUST, 5 SHOULD). |
+| 0.1.29  | 2026-08-09 | Spec-citation fold for Cursor universal instruction intent (closes #1744). Added [req-tg-011] (Section 8.5.5, consumer MUST): Cursor rules deploy under `.cursor/rules/<name>.mdc`; an explicit universal `applyTo: "**"` emits `alwaysApply: true` with no `globs`, while other non-empty patterns remain `globs`-scoped and absent or empty `applyTo` emits neither key. Section 8.7 and Section 11.3.2 consumer enumerations and Appendix C updated. Statement count: 112 -> 113 (108 MUST, 5 SHOULD). |
 
 Errata (none at publication).
 

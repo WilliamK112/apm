@@ -412,6 +412,11 @@ requirements:
     section: "8.5.4"
     conformance_class: consumer
     notes: "project-scoped native hooks use a portable project-directory environment anchor and reject shell-expansion path syntax"
+  - id: req-tg-011
+    keyword: MUST
+    section: "8.5.5"
+    conformance_class: consumer
+    notes: "Cursor universal applyTo maps to alwaysApply without globs; scoped patterns remain globs"
   - id: req-sc-001
     keyword: MUST
     section: "10.4"
