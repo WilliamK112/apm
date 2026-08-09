@@ -398,23 +398,13 @@ def _resolve_package_references(
                 dependency_reference_cls=DependencyReference,
                 logger=logger,
             )
-            package_skill_subset = (
-                package_skill_subsets.get(package) if package_skill_subsets else None
-            )
-            effective_skill_subset = skill_subset
-            if package_skill_subset:
-                if effective_skill_subset:
-                    effective_skill_subset = builtins.tuple(
-                        sorted({*effective_skill_subset, *package_skill_subset})
-                    )
-                else:
-                    effective_skill_subset = package_skill_subset
             apply_cli_skill_pin(
                 dep_ref,
-                effective_skill_subset,
-                skill_subset_from_cli or bool(package_skill_subset),
+                skill_subset,
+                skill_subset_from_cli,
                 current_deps,
                 _apm_yml_entries,
+                package_subset=(package_skill_subsets or {}).get(package),
                 dependency_reference_cls=DependencyReference,
                 logger=logger,
             )

@@ -404,28 +404,30 @@ def apply_cli_skill_pin(
     current_deps: builtins.list,
     apm_yml_entries: dict,
     *,
+    package_subset: builtins.tuple[str, ...] | None = None,
     dependency_reference_cls: Any,
     logger: Any | None = None,
 ) -> None:
     """Attach, merge, or reset a CLI ``--skill`` pin on ``dep_ref`` in place.
 
-    With an explicit ``cli_subset``, merge it additively with any persisted
-    ``skills:`` so repeated ``--skill`` invocations union rather than replace
-    (issue #1771). With ``--skill '*'`` (``skill_subset_from_cli`` True and an
-    empty ``cli_subset``), reset the pin back to the full bundle and record the
+    With an explicit CLI or per-package implicit subset, merge it additively
+    with any persisted ``skills:`` so repeated pins union rather than replace
+    (issue #1771). With ``--skill '*'`` (``skill_subset_from_cli`` True and no
+    implicit subset), reset the pin back to the full bundle and record the
     refreshed plain-string ``apm.yml`` entry under the reference's canonical key
     so manifest and on-disk state agree on the whole bundle (issue #1786 reset).
     """
     identity = dep_ref.get_identity()
-    if cli_subset:
+    effective_subset = builtins.tuple(sorted({*(cli_subset or ()), *(package_subset or ())}))
+    if effective_subset:
         dep_ref.skill_subset = normalize_and_merge_skill_subset(
-            cli_subset,
+            effective_subset,
             current_deps,
             identity,
             dependency_reference_cls=dependency_reference_cls,
         )
         return
-    if skill_subset_from_cli:
+    if skill_subset_from_cli or package_subset:
         dep_ref.skill_subset = None
         apm_yml_entries[dep_ref.to_canonical()] = dep_ref.to_apm_yml_entry()
         if logger:
