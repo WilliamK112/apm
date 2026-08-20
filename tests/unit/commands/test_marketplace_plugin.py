@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch  # noqa: F401
 
 import pytest
+import yaml
 from click.testing import CliRunner
 
 from apm_cli.commands.marketplace import marketplace
@@ -37,6 +38,12 @@ def _write_yml(tmp_path: Path, content: str | None = None) -> Path:
     p = tmp_path / "marketplace.yml"
     p.write_text(content, encoding="utf-8")
     return p
+
+
+def _load_package_entry(yml_path: Path, name: str) -> dict:
+    """Load one package entry by name without depending on YAML formatting."""
+    data = yaml.safe_load(yml_path.read_text(encoding="utf-8"))
+    return next(entry for entry in data["packages"] if entry["name"] == name)
 
 
 # ---------------------------------------------------------------------------
@@ -142,7 +149,8 @@ class TestPackageAdd:
             ],
         )
         assert result.exit_code == 0, result.output
-        assert "category: developer-tools" in yml.read_text(encoding="utf-8")
+        entry = _load_package_entry(yml, "categorized-tool")
+        assert entry["category"] == "developer-tools"
 
     def test_blank_category_exits_2_without_modifying_file(self, runner, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
@@ -240,7 +248,8 @@ class TestPackageSet:
             ["package", "set", "existing-package", "--category", "productivity"],
         )
         assert result.exit_code == 0, result.output
-        assert "category: productivity" in yml.read_text(encoding="utf-8")
+        entry = _load_package_entry(yml, "existing-package")
+        assert entry["category"] == "productivity"
 
     def test_blank_category_exits_2_without_modifying_file(self, runner, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
