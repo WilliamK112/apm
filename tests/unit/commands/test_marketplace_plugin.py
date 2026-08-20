@@ -123,6 +123,48 @@ class TestPackageAdd:
         result = runner.invoke(marketplace, ["package", "add", "--help"])
         assert result.exit_code == 0
         assert "Add a package" in result.output
+        assert "--category" in result.output
+
+    def test_category_is_persisted(self, runner, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        yml = _write_yml(tmp_path)
+        result = runner.invoke(
+            marketplace,
+            [
+                "package",
+                "add",
+                "acme/categorized-tool",
+                "--version",
+                ">=1.0.0",
+                "--category",
+                "developer-tools",
+                "--no-verify",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert "category: developer-tools" in yml.read_text(encoding="utf-8")
+
+    def test_blank_category_exits_2_without_modifying_file(self, runner, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        yml = _write_yml(tmp_path)
+        before = yml.read_text(encoding="utf-8")
+        result = runner.invoke(
+            marketplace,
+            [
+                "package",
+                "add",
+                "acme/categorized-tool",
+                "--version",
+                ">=1.0.0",
+                "--category",
+                "   ",
+                "--no-verify",
+            ],
+        )
+        assert result.exit_code == 2
+        assert "category" in result.output
+        assert "non-empty string" in result.output
+        assert yml.read_text(encoding="utf-8") == before
 
     def test_verify_calls_ref_resolver(self, runner, tmp_path, monkeypatch):
         """Without --no-verify the command calls list_remote_refs."""
@@ -188,6 +230,30 @@ class TestPackageSet:
         result = runner.invoke(marketplace, ["package", "set", "--help"])
         assert result.exit_code == 0
         assert "Update a package" in result.output
+        assert "--category" in result.output
+
+    def test_category_is_persisted(self, runner, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        yml = _write_yml(tmp_path)
+        result = runner.invoke(
+            marketplace,
+            ["package", "set", "existing-package", "--category", "productivity"],
+        )
+        assert result.exit_code == 0, result.output
+        assert "category: productivity" in yml.read_text(encoding="utf-8")
+
+    def test_blank_category_exits_2_without_modifying_file(self, runner, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        yml = _write_yml(tmp_path)
+        before = yml.read_text(encoding="utf-8")
+        result = runner.invoke(
+            marketplace,
+            ["package", "set", "existing-package", "--category", ""],
+        )
+        assert result.exit_code == 2
+        assert "category" in result.output
+        assert "non-empty string" in result.output
+        assert yml.read_text(encoding="utf-8") == before
 
     def test_version_and_ref_conflict_exits_2(self, runner, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
