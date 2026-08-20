@@ -36,9 +36,18 @@ def test_generated_bundle_text_writes_are_lf_deterministic(
         and isinstance(node.func, ast.Attribute)
         and node.func.attr == "write_text"
     ]
+    lf_writes = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and (
+            (isinstance(node.func, ast.Name) and node.func.id == "write_text_lf")
+            or (isinstance(node.func, ast.Attribute) and node.func.attr == "write_text_lf")
+        )
+    ]
 
     assert direct_path_writes == []
-    assert source.count("write_text_lf(") == expected_lf_writes
+    assert len(lf_writes) == expected_lf_writes
 
 
 def test_policy_cache_metadata_redaction_has_single_owner() -> None:
