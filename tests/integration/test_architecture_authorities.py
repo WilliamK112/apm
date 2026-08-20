@@ -14,6 +14,33 @@ from types import ModuleType
 import pytest
 
 
+@pytest.mark.parametrize(
+    ("relative_path", "expected_lf_writes"),
+    [
+        ("src/apm_cli/bundle/plugin_exporter.py", 4),
+        ("src/apm_cli/bundle/packer.py", 1),
+        ("src/apm_cli/core/plugin_manifest.py", 1),
+    ],
+)
+def test_generated_bundle_text_writes_are_lf_deterministic(
+    relative_path: str, expected_lf_writes: int
+) -> None:
+    """Generated bundle text must never use platform-native Path.write_text."""
+    root = Path(__file__).parents[2]
+    source = (root / relative_path).read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    direct_path_writes = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "write_text"
+    ]
+
+    assert direct_path_writes == []
+    assert source.count("write_text_lf(") == expected_lf_writes
+
+
 def test_policy_cache_metadata_redaction_has_single_owner() -> None:
     """Policy cache refs must be sanitized by the canonical writer."""
     root = Path(__file__).parents[2]

@@ -13,6 +13,7 @@ from ..utils.archive import (
     write_tar_archive,
     write_zip_archive,
 )
+from ..utils.atomic_io import write_text_lf
 from .attest import verify_attested_file
 from .lockfile_enrichment import _filter_files_by_target, enrich_lockfile_for_pack
 
@@ -315,7 +316,7 @@ def pack_bundle(
 
     # 8. Enrich lockfile copy and write to bundle
     enriched_yaml = enrich_lockfile_for_pack(lockfile, fmt, effective_target)
-    (bundle_dir / "apm.lock.yaml").write_text(enriched_yaml, encoding="utf-8")
+    write_text_lf(bundle_dir / "apm.lock.yaml", enriched_yaml)
 
     result = PackResult(
         bundle_path=bundle_dir,
