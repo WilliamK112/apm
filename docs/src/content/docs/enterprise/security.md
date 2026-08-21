@@ -131,11 +131,11 @@ dependencies:
 ```
 
 For example, `http://mirror.example.com/contoso/tools` canonicalizes to
-`mirror.example.com/contoso/tools`, so it does not match this allow list. If a
-mirror's canonical host path is allowed, policy accepts that identity for both
-HTTP and HTTPS. The manifest and CLI approvals above remain the scheme-aware
-HTTP controls. `registry_source.allow_non_registry` is a separate,
-experimental registry-routing control; it does not control HTTP Git transport.
+`contoso/tools`, so it matches this allow list. Policy cannot distinguish the
+mirror hostname or HTTP from HTTPS; the manifest and CLI approvals above are
+the scheme- and host-aware HTTP controls. `registry_source.allow_non_registry`
+is a separate, experimental registry-routing control; it does not control HTTP
+Git transport.
 
 These controls make the decision visible, but they do **not** make HTTP safe:
 
