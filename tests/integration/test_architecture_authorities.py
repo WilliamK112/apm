@@ -14,40 +14,19 @@ from types import ModuleType
 import pytest
 
 
-@pytest.mark.parametrize(
-    ("relative_path", "expected_lf_writes"),
-    [
-        ("src/apm_cli/bundle/plugin_exporter.py", 4),
-        ("src/apm_cli/bundle/packer.py", 1),
-        ("src/apm_cli/core/plugin_manifest.py", 1),
-    ],
-)
-def test_generated_bundle_text_writes_are_lf_deterministic(
-    relative_path: str, expected_lf_writes: int
-) -> None:
-    """Generated bundle text must never use platform-native Path.write_text."""
+def test_generated_bundle_text_writes_are_lf_deterministic() -> None:
+    """Generated bundle text must route through the checked LF boundary."""
     root = Path(__file__).parents[2]
-    source = (root / relative_path).read_text(encoding="utf-8")
-    tree = ast.parse(source)
-    direct_path_writes = [
-        node
-        for node in ast.walk(tree)
-        if isinstance(node, ast.Call)
-        and isinstance(node.func, ast.Attribute)
-        and node.func.attr == "write_text"
-    ]
-    lf_writes = [
-        node
-        for node in ast.walk(tree)
-        if isinstance(node, ast.Call)
-        and (
-            (isinstance(node.func, ast.Name) and node.func.id == "write_text_lf")
-            or (isinstance(node.func, ast.Attribute) and node.func.attr == "write_text_lf")
-        )
-    ]
+    result = subprocess.run(
+        (sys.executable, "scripts/check_generated_bundle_text_writers.py", "--root", str(root)),
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
 
-    assert direct_path_writes == []
-    assert len(lf_writes) == expected_lf_writes
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "generated bundle text writers use deterministic LF" in result.stdout
 
 
 def test_removed_agent_plugin_lifecycle_tombstone_passes() -> None:

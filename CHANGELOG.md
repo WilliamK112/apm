@@ -24,7 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Generated bundle and plugin metadata now uses deterministic LF line endings,
-  keeping `apm pack` output reproducible across operating systems. (#2624)
+  keeping generated metadata byte-stable across operating systems. Existing
+  generated plugin manifests on Windows may have a one-time line-ending-only
+  diff on their next forced rewrite; project YAML files are unchanged. (#2624)
 - Windows binary is now Authenticode-signed in the release workflow, eliminating
   the `Trojan:Script/Wacatac.H!ml` Windows Defender false positive on unsigned
   PyInstaller bundles. (#2435)
