@@ -18,7 +18,7 @@ from apm_cli.deps.lockfile import LockFile
 pytestmark = pytest.mark.component
 
 
-def _write_project(root: Path, *, with_skill: bool = False) -> Path:
+def _write_project(root: Path) -> Path:
     """Create the smallest project accepted by every bundle producer."""
     root.mkdir(parents=True)
     (root / "apm.yml").write_text(
@@ -32,13 +32,6 @@ def _write_project(root: Path, *, with_skill: bool = False) -> Path:
         encoding="utf-8",
     )
     LockFile().write(root / "apm.lock.yaml")
-    if with_skill:
-        skill = root / ".apm" / "skills" / "demo" / "SKILL.md"
-        skill.parent.mkdir(parents=True)
-        skill.write_text(
-            "---\nname: demo\ndescription: Demo skill\n---\n\nUse the demo skill.\n",
-            encoding="utf-8",
-        )
     return root
 
 
@@ -116,7 +109,7 @@ def test_claude_plugin_metadata_and_hashes_use_lf_under_windows_translation(
 def test_agent_plugin_metadata_and_hashes_use_lf_under_windows_translation(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    project = _write_project(tmp_path / "project", with_skill=True)
+    project = _write_project(tmp_path / "project")
     _emulate_windows_text_translation(monkeypatch)
 
     result = export_agent_plugin_bundle(project, tmp_path / "build")
