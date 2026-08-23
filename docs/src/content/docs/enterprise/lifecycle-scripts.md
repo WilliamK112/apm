@@ -30,7 +30,7 @@ and can delay the operation until they finish or their timeout elapses.
 Scripts are defined in three tiers. The **project tier** uses the repository `apm.yml`
 manifest under a top-level `lifecycle:` key. The **user tier** uses
 `~/.apm/apm.yml` (or `$APM_HOME/apm.yml`) under the same `lifecycle:` key.
-The **admin** tier uses `/etc/apm/policy.d/*.json` on Linux and macOS, or
+The **admin** tier uses `/etc/apm/policy.d/*.json` on POSIX systems, or
 `C:\ProgramData\APM\policy.d\*.json` on Windows. It is suited for
 machine- and fleet-managed deployment.
 
@@ -163,11 +163,12 @@ Security:
 ## Discovery locations
 
 Script files are loaded from three directories. All files are **additive** --
-every script from every file runs. Policy scripts cannot be disabled.
+every script from every file runs. Policy scripts cannot be individually
+disabled; the global kill switches below suppress all lifecycle scripts.
 
 | Priority     | Path                                                                        | Who controls     | Format |
 |--------------|-----------------------------------------------------------------------------|------------------|--------|
-| 1 (highest)  | Linux/macOS: `/etc/apm/policy.d/*.json`<br />Windows: `C:\ProgramData\APM\policy.d\*.json` | Platform/IT team | JSON   |
+| 1 (highest)  | POSIX: `/etc/apm/policy.d/*.json`<br />Windows: `C:\ProgramData\APM\policy.d\*.json` | Platform/IT team | JSON   |
 | 2            | `~/.apm/apm.yml`                                                           | Individual user  | YAML   |
 | 3            | `apm.yml` `lifecycle:`                                                     | Project          | YAML   |
 
@@ -197,10 +198,11 @@ POST body.
 
 Lifecycle scripts from different sources are subject to different trust rules:
 
-- **Policy scripts** (`/etc/apm/policy.d/*.json` on Linux/macOS or
+- **Policy scripts** (`/etc/apm/policy.d/*.json` on POSIX systems or
   `C:\ProgramData\APM\policy.d\*.json` on Windows) -- controlled by
   your platform/IT team. Run without any consent gate; they cannot be
-  disabled by the developer.
+  individually disabled by the developer. `APM_NO_SCRIPTS=1` suppresses
+  all lifecycle-script tiers for that run.
 - **User scripts** (`~/.apm/apm.yml`) -- controlled by the developer.
   Run without a gate.
 - **Project scripts** (`apm.yml` `lifecycle:`) -- committed into the repo and
@@ -231,7 +233,7 @@ policy directory to track which packages are actively used:
 
 Create `analytics.json` in the platform admin directory:
 
-- Linux/macOS: `/etc/apm/policy.d/analytics.json`
+- POSIX: `/etc/apm/policy.d/analytics.json`
 - Windows: `C:\ProgramData\APM\policy.d\analytics.json`
 
 ```json
