@@ -101,6 +101,20 @@ if [ "$effective_target_definition_count" -ne 1 ] \
     [ -n "$effective_target_context_hits" ] && echo "$effective_target_context_hits"
     violations=$((violations + 1))
 fi
+copilot_mcp_path_owner="src/apm_cli/adapters/client/copilot.py"
+copilot_mcp_path_duplicate_hits=$(
+    find src/apm_cli -type f -name '*.py' ! -path "$copilot_mcp_path_owner" \
+        -exec grep -En '(\.github/mcp\.json|mcp-config\.json)' {} + \
+        | grep -v 'architecture-authority-exempt:' \
+        || true
+)
+if ! grep -q 'COPILOT_HOME' "$copilot_mcp_path_owner" \
+    || ! grep -q 'ClientFactory.create_client(' src/apm_cli/integration/mcp_integrator.py \
+    || [ -n "$copilot_mcp_path_duplicate_hits" ]; then
+    echo "[x] Copilot CLI MCP paths must come from the Copilot adapter"
+    [ -n "$copilot_mcp_path_duplicate_hits" ] && echo "$copilot_mcp_path_duplicate_hits"
+    violations=$((violations + 1))
+fi
 check_pattern \
     "Install orchestration must not branch on native locator target names" \
     'name == "copilot-(app|cowork)"|name in \{.*copilot-(app|cowork)' \
@@ -167,6 +181,14 @@ if [ "$nested_worktree_walk_count" -ne 1 ] \
     || [ -n "$nested_worktree_rglob_hits" ]; then
     echo "[x] Nested worktree cleanup must prune .git-file roots"
     [ -n "$nested_worktree_rglob_hits" ] && echo "$nested_worktree_rglob_hits"
+    violations=$((violations + 1))
+fi
+agents_source_attribution_output=$(python3 scripts/check_agents_source_attribution_owner.py \
+    "$distributed_compiler" 2>&1)
+agents_source_attribution_status=$?
+if [ "$agents_source_attribution_status" -ne 0 ]; then
+    echo "[x] AGENTS.md cosmetics must use the canonical source_attribution config boolean"
+    echo "$agents_source_attribution_output"
     violations=$((violations + 1))
 fi
 hook_file="src/apm_cli/integration/hook_integrator.py"
@@ -263,6 +285,35 @@ if ! grep -q 'incomplete_chain' src/apm_cli/policy/discovery.py \
     violations=$((violations + 1))
 fi
 policy_file="src/apm_cli/policy/discovery.py"
+ado_policy_project_owner_count=$(grep -Ec '^ADO_POLICY_PROJECT = "apm"$' "$policy_file" || true)
+ado_policy_repository_owner_count=$(grep -Ec '^ADO_POLICY_REPOSITORY = "apm-policy"$' "$policy_file" || true)
+ado_policy_coordinate_consumers=$(grep -Ec \
+    'project=ADO_POLICY_PROJECT|ADO_POLICY_PROJECT, ADO_POLICY_REPOSITORY' "$policy_file" || true)
+ado_policy_coordinate_duplicates=$(
+    grep -rEn --include='*.py' \
+        '^[[:space:]]*ADO_POLICY_(PROJECT|REPOSITORY)[[:space:]]*=' \
+        src/apm_cli \
+        | grep -Fv "${policy_file}:" \
+        | grep -v 'architecture-authority-exempt:' \
+        || true
+)
+ado_policy_coordinate_literal_consumers=$(
+    grep -En \
+        'project[[:space:]]*=[[:space:]]*["'\'']apm["'\'']|repo[[:space:]]*=[[:space:]]*["'\'']apm-policy["'\'']' \
+        "$policy_file" \
+        | grep -v 'architecture-authority-exempt:' \
+        || true
+)
+if [ "$ado_policy_project_owner_count" -ne 1 ] \
+    || [ "$ado_policy_repository_owner_count" -ne 1 ] \
+    || [ "$ado_policy_coordinate_consumers" -ne 2 ] \
+    || [ -n "$ado_policy_coordinate_duplicates" ] \
+    || [ -n "$ado_policy_coordinate_literal_consumers" ]; then
+    echo "[x] ADO policy coordinate must come from discovery.py constants"
+    [ -n "$ado_policy_coordinate_duplicates" ] && echo "$ado_policy_coordinate_duplicates"
+    [ -n "$ado_policy_coordinate_literal_consumers" ] && echo "$ado_policy_coordinate_literal_consumers"
+    violations=$((violations + 1))
+fi
 policy_named_defs=$(grep -Ec \
     '^[[:space:]]*def [[:alnum:]_]*(policy_to_dict|serialize_policy)[[:alnum:]_]*\(' \
     "$policy_file" || true)
@@ -937,6 +988,17 @@ if ! grep -q '^def dependency_hook_source_marker(' "$hook_ownership_owner" \
         "$hook_ownership_consumer" \
     || grep -q '^    def _dependency_hook_source' "$hook_ownership_consumer"; then
     echo "[x] Merged-hook ownership markers must route through integration/hook_ownership.py"
+    violations=$((violations + 1))
+fi
+
+echo "[*] AC15d: plugin-root hook command parsing authority"
+plugin_root_owner="src/apm_cli/integration/hook_command_paths.py"
+plugin_root_consumer="src/apm_cli/integration/hook_integrator.py"
+if ! grep -q '^PLUGIN_ROOT_NAMES = (' "$plugin_root_owner" \
+    || grep -Eq 'CLAUDE_PLUGIN_ROOT|CURSOR_PLUGIN_ROOT|KIRO_PLUGIN_ROOT' \
+        "$plugin_root_consumer" \
+    || grep -Fq '"PLUGIN_ROOT"' "$plugin_root_consumer"; then
+    echo "[x] Plugin-root hook command parsing must route through hook_command_paths.py"
     violations=$((violations + 1))
 fi
 

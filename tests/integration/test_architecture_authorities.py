@@ -748,6 +748,68 @@ def test_experimental_target_hints_have_single_owner() -> None:
     assert "Experimental target hints must route through install/target_hints.py" in guard
 
 
+def test_ado_policy_coordinate_has_single_owner() -> None:
+    """ADO discovery and inheritance must share the valid ADO coordinate."""
+    root = Path(__file__).parents[2]
+    owner = (root / "src/apm_cli/policy/discovery.py").read_text(encoding="utf-8")
+    guard = (root / "scripts/lint-architecture-boundaries.sh").read_text(encoding="utf-8")
+    owner_row = (
+        "| Cached policy shape | policy/discovery.py "
+        "(_policy_to_dict via _serialize_policy; ADO_POLICY_PROJECT; ADO_POLICY_REPOSITORY) |"
+    )
+
+    tree = ast.parse(owner)
+    names = [
+        node.id
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Name) and node.id in {"ADO_POLICY_PROJECT", "ADO_POLICY_REPOSITORY"}
+    ]
+
+    assert names.count("ADO_POLICY_PROJECT") == 3
+    assert names.count("ADO_POLICY_REPOSITORY") == 4
+    assert "ADO policy coordinate must come from discovery.py constants" in guard
+    assert owner_row in (root / ".apm/instructions/architecture.instructions.md").read_text(
+        encoding="utf-8"
+    )
+
+
+def test_ado_policy_coordinate_guard_rejects_literal_bypass(tmp_path: Path) -> None:
+    """The boundary guard must reject a second literal ADO coordinate."""
+    root = Path(__file__).parents[2]
+    sandbox = tmp_path / "repo"
+    shutil.copytree(
+        root,
+        sandbox,
+        ignore=shutil.ignore_patterns(
+            ".git",
+            ".venv",
+            ".pytest_cache",
+            "__pycache__",
+            "build",
+            "dist",
+            "node_modules",
+        ),
+    )
+    owner_path = sandbox / "src/apm_cli/policy/discovery.py"
+    owner_path.write_text(
+        owner_path.read_text(encoding="utf-8")
+        + '\n_PARALLEL_ADO_POLICY_COORDINATE = dict(project="apm", repo="apm-policy")\n',
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        ("bash", "scripts/lint-architecture-boundaries.sh"),
+        cwd=sandbox,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=300,
+    )
+
+    assert result.returncode == 1
+    assert "ADO policy coordinate must come from discovery.py constants" in result.stdout
+
+
 def test_intellij_mcp_config_path_has_single_owner() -> None:
     """JetBrains Copilot path selection must stay in its client adapter."""
     root = Path(__file__).parents[2]
@@ -797,6 +859,57 @@ def test_intellij_mcp_config_path_guard_rejects_parallel_decision(tmp_path: Path
 
     assert result.returncode == 1
     assert "JetBrains Copilot MCP paths must come from the IntelliJ adapter" in result.stdout
+
+
+def test_copilot_mcp_config_paths_have_single_owner() -> None:
+    """Copilot cleanup and runtime inspection use the adapter-owned path."""
+    root = Path(__file__).parents[2]
+    owner = (root / "src/apm_cli/adapters/client/copilot.py").read_text(encoding="utf-8")
+    integrator = (root / "src/apm_cli/integration/mcp_integrator.py").read_text(encoding="utf-8")
+    runtime = (root / "src/apm_cli/runtime/copilot_runtime.py").read_text(encoding="utf-8")
+    guard = (root / "scripts/lint-architecture-boundaries.sh").read_text(encoding="utf-8")
+
+    assert owner.count("def get_config_path(") == 1
+    assert "COPILOT_HOME" in owner
+    assert 'ClientFactory.create_client(\n                "copilot",' in integrator
+    assert "CopilotClientAdapter(user_scope=True).get_config_path()" in runtime
+    assert "Copilot CLI MCP paths must come from the Copilot adapter" in guard
+
+
+def test_copilot_mcp_config_path_guard_rejects_parallel_decision(tmp_path: Path) -> None:
+    """The boundary lint rejects direct Copilot cleanup path selection."""
+    root = Path(__file__).parents[2]
+    sandbox = tmp_path / "repo"
+    shutil.copytree(
+        root,
+        sandbox,
+        ignore=shutil.ignore_patterns(
+            ".git",
+            ".venv",
+            ".pytest_cache",
+            "__pycache__",
+            "build",
+            "dist",
+            "node_modules",
+        ),
+    )
+    runtime = sandbox / "src/apm_cli/runtime/copilot_runtime.py"
+    runtime.write_text(
+        runtime.read_text(encoding="utf-8") + '\n_PARALLEL_COPILOT_MCP_PATH = ".github/mcp.json"\n',
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        ("bash", "scripts/lint-architecture-boundaries.sh"),
+        cwd=sandbox,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=300,
+    )
+
+    assert result.returncode == 1
+    assert "Copilot CLI MCP paths must come from the Copilot adapter" in result.stdout
 
 
 def test_local_marketplace_version_source_has_single_owner() -> None:
@@ -2043,6 +2156,50 @@ def _load_skill_subset_owner_checker() -> ModuleType:
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module
+
+
+def _load_agents_source_attribution_owner_checker(root: Path) -> ModuleType:
+    """Import the AGENTS.md attribution authority checker as a module."""
+    module_name = "check_agents_source_attribution_owner"
+    script_path = root / "scripts" / f"{module_name}.py"
+    spec = importlib.util.spec_from_file_location(module_name, script_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_agents_source_attribution_uses_the_canonical_config_boolean() -> None:
+    """AGENTS.md cosmetics must not derive their flag from the source map."""
+    root = Path(__file__).parents[2]
+    checker = _load_agents_source_attribution_owner_checker(root)
+    compiler = root / "src/apm_cli/compilation/distributed_compiler.py"
+    guard = (root / "scripts/lint-architecture-boundaries.sh").read_text(encoding="utf-8")
+
+    assert checker.find_violations(compiler) == []
+    assert "AGENTS.md cosmetics must use the canonical source_attribution config boolean" in guard
+
+
+def test_agents_source_attribution_guard_rejects_placement_source_map(tmp_path: Path) -> None:
+    """The authority guard rejects restoring the source-map/config conflation."""
+    root = Path(__file__).parents[2]
+    checker = _load_agents_source_attribution_owner_checker(root)
+    compiler = root / "src/apm_cli/compilation/distributed_compiler.py"
+    mutated = tmp_path / "distributed_compiler.py"
+    mutated.write_text(
+        compiler.read_text(encoding="utf-8").replace(
+            "source_attribution=source_attribution,",
+            "source_attribution=p.source_attribution,",
+            1,
+        ),
+        encoding="utf-8",
+    )
+
+    assert checker.find_violations(mutated) == [
+        f"{mutated}: compile_distributed must pass source_attribution=source_attribution to "
+        "_generate_agents_content, not the placement source map"
+    ]
 
 
 def _load_windows_stable_path_checker(root: Path) -> ModuleType:
