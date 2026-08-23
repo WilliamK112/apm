@@ -27,6 +27,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   keeping generated metadata byte-stable across operating systems. Existing
   generated plugin manifests on Windows may have a one-time line-ending-only
   diff on their next forced rewrite; project YAML files are unchanged. (#2624)
+- Lockfiles generated on Windows for marketplace-plugin / skill-subset git
+  dependencies now pass `apm install --frozen` on Linux, and vice versa. APM
+  writes synthetic `apm.yml` and inline-hooks `.apm/hooks/hooks.json` files
+  with deterministic LF line endings so their `content_hash` is identical on
+  every OS. Existing Windows lockfiles may retain the old CRLF-domain hash;
+  keep the lockfile so its `resolved_commit` pins remain intact while the
+  automatic one-time repair tracked in #2628 lands. (closes #2619)
 - Hook commands such as `"${CLAUDE_PLUGIN_ROOT}"/hooks/probe.py` now rewrite to
   `"${CLAUDE_PLUGIN_ROOT}/hooks/probe.py"` and warn when a supported plugin-root
   placeholder remains unresolved instead of silently deploying a dead hook.
@@ -52,6 +59,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   authentication failure unrecognisable and private-repo installs failed with
   misleading network guidance. Git subprocesses in the authentication retry
   path now run with `LC_ALL=C` and `LANGUAGE=C`. (by @Naofel-eal, closes #2533)
+- Codex MCP configuration now accepts plain HTTP for loopback endpoints while
+  retaining HTTPS for every non-loopback host. (by @normandev92, #2468)
 
 ### Changed
 
@@ -60,6 +69,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   flag. In non-interactive (non-TTY) contexts the default is `--no-trust-bin`.
   Pass `--trust-bin` to suppress the warning and deploy, or `apm approve` for
   persistent per-package approval.
+### Fixed
+
+- Codex MCP configuration now accepts plain HTTP for loopback endpoints while
+  retaining HTTPS for every non-loopback host. (by @normandev92, #2468)
 
 ### Removed
 
