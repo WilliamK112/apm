@@ -1,7 +1,7 @@
 """Manifest (apm.yml) + scheme + tag + conformance-class tests.
 
 Covers req-mf-001..024, req-ext-001..002, req-sc-001..014,
-req-tg-001..011, req-cf-001..002.
+req-tg-001..012, req-cf-001..002.
 
 Every requirement is exercised either by (a) schema validation
 against shipped fixtures (positive + negative), (b) a verbatim
@@ -792,11 +792,11 @@ def test_dependency_package_targets_are_restriction_only() -> None:
         "MUST be rejected before target-scoped",
         "MUST be reconciled under",
         "[req-lk-021](#req-lk-021)",
-        "[req-tg-008](#req-tg-008), [req-tg-009](#req-tg-009),\n[req-tg-010](#req-tg-010), [req-tg-011](#req-tg-011),\n[req-sc-001](#req-sc-001),",
+        "[req-tg-008](#req-tg-008), [req-tg-009](#req-tg-009),\n[req-tg-010](#req-tg-010), [req-tg-011](#req-tg-011),\n[req-tg-012](#req-tg-012),\n[req-sc-001](#req-sc-001),",
     )
 
 
-@pytest.mark.req("req-tg-011")
+@pytest.mark.req("req-tg-012")
 def test_consumer_preserves_cursor_universal_instruction_intent() -> None:
     universal = InstructionIntegrator._convert_to_cursor_rules(
         "---\napplyTo: '**'\n---\n\n# Repository guardrails"
@@ -944,6 +944,33 @@ def test_project_scoped_native_hook_command_is_portably_anchored() -> None:
         "`$env:CLAUDE_PROJECT_DIR` in\n> PowerShell commands",
         "MUST NOT embed an absolute consumer",
         "MUST reject a\nhook path containing a dollar sign or backtick",
+    )
+
+
+@pytest.mark.req("req-tg-011")
+def test_agent_plugin_undeployable_without_native_lifecycle() -> None:
+    """A schema-bearing Agent Plugin dependency fails closed, tree unchanged."""
+    assert_spec_contains(
+        "MUST treat a\nschema-bearing Agent Plugins v1 dependency as undeployable",
+        "MUST refuse deployment with one actionable diagnostic",
+        "MUST leave the project tree byte-identical to its pre-install state",
+        "MUST NOT fall back to\nlegacy primitive projection",
+    )
+
+
+@pytest.mark.req("req-tg-011")
+def test_agent_plugin_deployment_boundary_precedes_all_mutation(tmp_path) -> None:
+    """Bind the real install-boundary contract: no target/integrator mutation runs."""
+    from tests.unit.install.test_agent_plugin_deployment_boundary import (
+        test_services_gate_precedes_all_target_and_integrator_mutation as _run_boundary_contract,
+    )
+
+    _run_boundary_contract(
+        tmp_path,
+        force=False,
+        trust_bin=None,
+        skill_subset=None,
+        dry_run=False,
     )
 
 
