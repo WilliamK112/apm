@@ -178,6 +178,14 @@ When a hook command references a script inside `hooks/` or `.apm/hooks/`,
 APM deploys that hook source bundle so sibling helper files resolve at
 runtime. Claude-family merged targets (Claude, Cursor, Codex, Gemini,
 Antigravity, and Windsurf), Copilot, and Kiro receive the same bundle.
+
+For portable hook scripts, quote the complete package-relative path:
+`"${PLUGIN_ROOT}/scripts/my hook.sh"`. A split-quoted path such as
+`"${PLUGIN_ROOT}"/scripts/my\ hook.sh` is also accepted. If install reports an
+unresolved plugin-root token, follow the package-specific repair: balance the
+quotes, add a relative path, or keep the path inside the package. Then run
+`apm install` again.
+
 Root hook JSON descriptors, symlinks, and `.apm-pin` markers are not
 deployed. JavaScript and TypeScript hook bundles get a minimal
 `package.json` sidecar with the source package's Node `type` (defaulting
@@ -514,6 +522,12 @@ distinct from the portable Agent Plugins v1 `plugin.json` produced by
 for the portable format.
 
 When `apm.yml` declares `target: claude` or `target: copilot` (or the plural `targets:` equivalent), `apm pack` also generates an ecosystem-specific `plugin.json` automatically -- authors no longer need to maintain this file manually. The manifest is synthesised from `apm.yml` identity fields (`name`, `version`, `description`, `author`, `license`). See the apm pack reference (reference/cli/pack/#plugin-manifests) for output paths, credential stripping, and per-ecosystem differences, or run `apm pack --help`.
+
+When a marketplace `plugin.json` declares `skills`, that declaration is the
+complete deploy list: declare each skill directory or an immediate container.
+An omitted key discovers root `skills/`; an explicit `[]` deploys none. If APM
+reports `plugin.json declares no deployable skills`, add the intended paths or
+remove the key to restore discovery.
 
 #### Shipping `bin/` executables (Claude Code only)
 
