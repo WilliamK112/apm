@@ -26,6 +26,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed false-positive security blocks from source-only package files:
+  `apm install` and surviving-package reintegration now scan the same authorized
+  file set they can deploy, while deployable prompts, hooks, skills, and approved
+  plugin bins remain protected. (#2490)
+- Marketplace `sourceBase` and full HTTPS repository paths now preserve safe
+  percent-encoded segments, enabling Azure DevOps project names such as
+  `My%20Projects`. (by @aryansk; fixes #2554) (#2584)
 - `apm lock export --timestamp` now rejects malformed or timezone-naive values
   before they enter CycloneDX or SPDX metadata. (by @manideep-malyala; fixes
   #2659) (#2660)
@@ -40,6 +47,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   every OS. Existing Windows lockfiles may retain the old CRLF-domain hash;
   keep the lockfile so its `resolved_commit` pins remain intact while the
   automatic one-time repair tracked in #2628 lands. (closes #2619)
+- `apm compile` now reduces matching work for literal scoped `applyTo` patterns
+  in large repositories while preserving historical placement. It shares a
+  source inventory across discovery and placement while preserving cleanup
+  behavior, and preserves commas in character classes. (#2595)
 - Hook commands such as `"${CLAUDE_PLUGIN_ROOT}"/hooks/probe.py` now rewrite to
   `"${CLAUDE_PLUGIN_ROOT}/hooks/probe.py"` and warn when a supported plugin-root
   placeholder remains unresolved instead of silently deploying a dead hook.
@@ -48,6 +59,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (by @MohammedAlkindi; closes #2639) (#2645)
 - `apm install` now resolves positional virtual-subdirectory git semver ranges before literal-ref preflight, while preserving registry version validation. (by @aryansk; closes #2514) (#2590)
 - `apm uninstall --global` now cleans removed-only target files before deleting their ownership state, while preserving files owned by surviving packages. (#2658)
+
+### Fixed
+
+- GitLab (gitlab.com and self-managed) org-policy auto-discovery now uses the valid `apm-policy` project convention instead of GitHub/ADO candidate names; missing policy projects are clean no-policy outcomes, and `APM_GITLAB_POLICY_REPO` overrides the project name. (#2605)
 - Windows binary is now Authenticode-signed in the release workflow, eliminating
   the `Trojan:Script/Wacatac.H!ml` Windows Defender false positive on unsigned
   PyInstaller bundles. (#2435)
@@ -64,6 +79,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`"skills": "./skills/engineering/tdd"`) still lands under its own leaf name
   instead of spilling a bare `SKILL.md` into the shared skills root.
   (closes #2530)
+- Root-declared plugin components (Claude Code single-skill shape
+  `"skills": ["./"]`, and the same for agents/commands/hooks) no longer cause
+  infinite recursion or unbounded writes during `apm install`.
+  `docs/src/content/docs/specs/openapm-v0.1.md` now explicitly requires
+  containment of consumer-generated staging output. (closes #2556)
 - Multi-target `apm compile` now avoids repeating expensive project analysis
   for each target, making multi-target runs scale like single-target runs
   without changing generated output. (closes #2482)
