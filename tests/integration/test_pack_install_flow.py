@@ -809,12 +809,11 @@ class TestValidateAndAddPackagesToApmYml:
         )
         assert result == []
 
-    def test_github_blob_skill_url_persists_skill_subset(self, tmp_path, monkeypatch):
+    @pytest.mark.parametrize("scheme", ["http", "https"])
+    def test_github_blob_skill_url_persists_skill_subset(self, tmp_path, monkeypatch, scheme):
         monkeypatch.chdir(tmp_path)
         self._write_apm_yml(tmp_path / "apm.yml")
-        url = (
-            "https://github.com/mattpocock/skills/blob/main/skills/productivity/handoff/SKILL.md#L1"
-        )
+        url = f"{scheme}://github.com/mattpocock/skills/blob/main/skills/productivity/handoff/SKILL.md#L1"
 
         with patch("apm_cli.commands.install._validate_package_exists", return_value=True):
             result, outcome = _validate_and_add_packages_to_apm_yml(
@@ -835,7 +834,8 @@ class TestValidateAndAddPackagesToApmYml:
             }
         ]
 
-    def test_raw_github_skill_url_updates_existing_manifest(self, tmp_path, monkeypatch):
+    @pytest.mark.parametrize("scheme", ["http", "https"])
+    def test_raw_github_skill_url_updates_existing_manifest(self, tmp_path, monkeypatch, scheme):
         monkeypatch.chdir(tmp_path)
         (tmp_path / "apm.yml").write_text(
             "name: test\n"
@@ -847,7 +847,7 @@ class TestValidateAndAddPackagesToApmYml:
             encoding="utf-8",
         )
         url = (
-            "https://raw.githubusercontent.com/mattpocock/skills/main/"
+            f"{scheme}://raw.githubusercontent.com/mattpocock/skills/main/"
             "skills/productivity/handoff/SKILL.md?plain=1#L1"
         )
 

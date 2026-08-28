@@ -12,6 +12,10 @@
 `apm install` also accepts GitHub `skills/<name>/SKILL.md` file URLs from
 `github.com/.../blob/...` and `raw.githubusercontent.com/...`; it persists the
 equivalent per-package `skills:` pin without affecting other dependencies.
+Both file-URL forms normalize to HTTPS, including copied `http://` URLs.
+Multiple skill URLs for the same repository and ref merge their skill selections
+into one dependency entry. See the [install reference](https://microsoft.github.io/apm/reference/cli/install/#install-only-a-subset-of-skills-from-a-bundle)
+for the resulting `apm.yml` shape.
 
 | Command | Purpose | Key flags |
 |---------|---------|-----------|

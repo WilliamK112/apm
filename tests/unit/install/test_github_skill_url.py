@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from urllib.parse import urlparse
+
 import pytest
 
 from apm_cli.install.package_resolution import (
@@ -29,12 +31,36 @@ def test_normalize_github_skill_url_package(url, expected):
     assert normalize_github_skill_url_package(url) == expected
 
 
+@pytest.mark.parametrize("scheme", ["http", "https"])
+@pytest.mark.parametrize(
+    "source", ["github.com/owner/repo/blob", "raw.githubusercontent.com/owner/repo"]
+)
+def test_normalize_github_skill_url_package_always_uses_https(scheme: str, source: str) -> None:
+    normalized = normalize_github_skill_url_package(
+        f"{scheme}://{source}/main/skills/review/SKILL.md?raw=1#L1"
+    )
+
+    assert normalized is not None
+    repo_ref, skills = normalized
+    parsed = urlparse(repo_ref)
+    assert (parsed.scheme, parsed.hostname, parsed.path, parsed.fragment) == (
+        "https",
+        "github.com",
+        "/owner/repo",
+        "main",
+    )
+    assert parsed.query == ""
+    assert skills == ("review",)
+
+
 @pytest.mark.parametrize(
     "url",
     [
         "owner/repo",
         "https://example.com/owner/repo/blob/main/skills/review/SKILL.md",
         "https://github.com/owner/repo",
+        "http://github.com/owner/repo",
+        "http://example.com/owner/repo/blob/main/skills/review/SKILL.md",
     ],
 )
 def test_normalize_github_skill_url_package_ignores_other_references(url):

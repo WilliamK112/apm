@@ -230,6 +230,24 @@ apm install owner/skill-bundle --skill '*'         # reset to all skills
 apm install https://github.com/owner/skill-bundle/blob/main/skills/review/SKILL.md
 ```
 
+The file URL above records this dependency in `apm.yml`:
+
+```yaml
+dependencies:
+  apm:
+    - git: owner/skill-bundle
+      ref: main
+      skills:
+        - review
+```
+
+The equivalent raw URL is
+`https://raw.githubusercontent.com/owner/skill-bundle/main/skills/review/SKILL.md`.
+Both file-URL forms normalize to an HTTPS repository reference, even when the
+copied URL starts with `http://`. Ordinary Git URLs keep their existing transport
+rules. Multiple skill URLs for the same repository and ref merge their `skills:`
+entries into one dependency; unrelated dependencies keep their own skill selections.
+
 ## Exit codes
 
 | Code | Meaning |

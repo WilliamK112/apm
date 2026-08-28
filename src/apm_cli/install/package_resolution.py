@@ -82,7 +82,7 @@ def normalize_github_skill_url_packages(
 
 
 def normalize_github_skill_url_package(package: str) -> tuple[str, tuple[str, ...]] | None:
-    """Return ``(repo_ref, skills)`` for GitHub ``skills/.../SKILL.md`` URLs."""
+    """Return an HTTPS repo ref and skills for GitHub ``skills/.../SKILL.md`` URLs."""
     parsed = urllib.parse.urlparse(package.strip())
     if parsed.scheme not in {"http", "https"}:
         return None
@@ -94,7 +94,6 @@ def normalize_github_skill_url_package(package: str) -> tuple[str, tuple[str, ..
             return None
         owner, repo = path_parts[0], path_parts[1]
         return _normalize_github_skill_url_parts(
-            parsed.scheme,
             owner,
             repo,
             path_parts[3:],
@@ -106,7 +105,6 @@ def normalize_github_skill_url_package(package: str) -> tuple[str, tuple[str, ..
             return None
         owner, repo = path_parts[0], path_parts[1]
         return _normalize_github_skill_url_parts(
-            parsed.scheme,
             owner,
             repo,
             path_parts[2:],
@@ -121,7 +119,6 @@ def _url_path_parts(path: str) -> list[str]:
 
 
 def _normalize_github_skill_url_parts(
-    scheme: str,
     owner: str,
     repo: str,
     ref_and_path_parts: list[str],
@@ -153,7 +150,7 @@ def _normalize_github_skill_url_parts(
         )
 
     skill_subset = tuple(parse_skill_subset(["/".join(skill_parts)]))
-    repo_ref = f"{scheme}://github.com/{owner}/{repo}#{'/'.join(ref_parts)}"
+    repo_ref = f"https://github.com/{owner}/{repo}#{'/'.join(ref_parts)}"
     return repo_ref, skill_subset
 
 
