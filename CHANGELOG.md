@@ -18,11 +18,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cursor instruction output now ports a universal `applyTo: "**"` to
   `alwaysApply: true` instead of `globs: "**"`, preserving always-on intent
   while leaving scoped globs unchanged. (by @WilliamK112, closes #1744)
+- `apm pack` now reports unavailable remote package metadata, exposes
+  certifiability in JSON, prevents `--check-clean` from certifying degraded
+  regeneration, and lets `--strict-metadata` fail before writes. (closes #2524)
 - `apm pack --check-clean` is now read-only and detects marketplace drift
   without overwriting artifacts. Release pipelines that also produce artifacts
   must run `apm pack` separately; see
   [Releasing from any CI](docs/src/content/docs/producer/releasing-from-any-ci.md#the-canonical-sequence).
   (by @danielmeppiel, closes #2727, #2730)
+- `apm update` now retains full-SHA pins without an eligible stable annotated
+  semver tag while continuing unrelated updates; malformed remote tag records
+  still fail before writes. The contract is recorded in `openapm-v0.1.md`.
+  (#2667)
 - Distributed `apm compile` now reconciles existing managed-section
   `AGENTS.md` files without overwriting hand-authored content, generates new
   placements safely, and never discovers, writes, or cleans content across
