@@ -7,16 +7,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Architecture ownership guards now use a sharded JSON registry and a
+  single-process Python linter while preserving exact-revision compatibility
+  and reducing warm median lint time by 75%. (#2739)
+
 ### Fixed
 
 - Cursor instruction output now ports a universal `applyTo: "**"` to
   `alwaysApply: true` instead of `globs: "**"`, preserving always-on intent
   while leaving scoped globs unchanged. (by @WilliamK112, closes #1744)
+- `apm pack --check-clean` is now read-only and detects marketplace drift
+  without overwriting artifacts. Release pipelines that also produce artifacts
+  must run `apm pack` separately; see
+  [Releasing from any CI](docs/src/content/docs/producer/releasing-from-any-ci.md#the-canonical-sequence).
+  (by @danielmeppiel, closes #2727, #2730)
+- Distributed `apm compile` now reconciles existing managed-section
+  `AGENTS.md` files without overwriting hand-authored content, generates new
+  placements safely, and never discovers, writes, or cleans content across
+  nested Git repository or linked-worktree boundaries. (by @aryansk; fixes
+  #2560 and #2713) (#2578)
+- Windows admin lifecycle policies now resolve from `%ProgramData%` instead of
+  assuming `C:\ProgramData`, while retaining the historical fallback.
+  (by @lukiod; closes #2684) (#2686)
+- Marketplace installs now materialize catalog-only LSP and MCP metadata
+  without requiring a package manifest in the downloaded source
+  (by @lkshrk, #2709).
+- Private `github.com` subdirectory packages now populate the persistent Git
+- Private `github.com` packages now populate the persistent Git
+  cache through repository-scoped credential fallback without storing
+  credentials in cache keys or remote URLs. (#2722)
+- Plugin refreshes now keep the existing package and its registered hooks live
+  while replacement content downloads and validates. Failed refreshes retain
+  the prior package instead of accepting stale content. (#2723)
+- Successful installs now remove inactive resolution staging directories left
+  by interrupted earlier runs while preserving active and unrelated entries.
+  (closes #2716)
+- Successful installs now safely clean up temporary backups left by interrupted
+  lock-aware runs without disturbing active installs or unrelated files. Legacy
+  lockless backups are preserved with manual recovery guidance. (#2720)
+- `apm doctor` now reports malformed project `executables` configuration as an
+  actionable informational warning instead of omitting the check. (#2719)
+- `apm doctor` now reports malformed project `executables` or deprecated
+  `allowExecutables` configuration as an actionable informational warning
+  instead of omitting the check. (#2719)
+- `apm doctor` now reports malformed project executable-trust configuration
+  under either `executables` or the deprecated `allowExecutables` key as an
+  actionable informational warning instead of omitting the check. (#2719)
 
-## [0.29.0] - 2026-08-26
+- Git subdirectory dependencies with symlinks to files elsewhere in the same
+  repository now install successfully where Git materializes symlinks; APM
+  widens the checkout only when needed. On Windows, Git defaults to
+  `core.symlinks=false` and checks these entries out as plain files, which is
+  outside #2707's scope. (by @MohammedAlkindi, closes #2707, #2710)
+
+## [0.29.0] - 2026-08-30
 
 ### Added
 
+- `apm install --target copilot` now registers portable Agent Plugins 1.0
+  packages natively while keeping each plugin intact under `apm_modules/`.
+  Copilot CLI `1.0.81` or newer can load the installed plugin without copies or
+  `--plugin-dir`. (closes #2703, #2705)
 - `apm install` now accepts `--trust-bin` and `--no-trust-bin` for
   per-invocation consent over marketplace-plugin executables. Non-interactive
   installs default to no deployment unless consent or policy permits it.
@@ -119,6 +172,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Performance
 
+- The contributor dashboard now refreshes GitHub every 15 minutes by default,
+  backs off for at least one hour after rate limits, and caches unchanged PR
+  enrichment, reducing scheduled GraphQL list traffic from 240 to 8 queries per
+  hour. (by @sergio-sisternes-epam, #2679)
 - `apm compile` now scopes literal `applyTo` walks to their roots, reducing
   matching work in large repositories without changing placement.
   (by @aryansk, #2595)
