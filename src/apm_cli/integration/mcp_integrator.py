@@ -19,7 +19,6 @@ import re
 import shutil
 import warnings
 from collections.abc import MutableMapping
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -293,6 +292,8 @@ class MCPIntegrator:
                 "args": list(dep.args) if dep.args else [],
                 "env": dict(dep.env) if dep.env else {},
             }
+            if dep.cwd is not None:
+                info["_raw_stdio"]["cwd"] = dep.cwd
 
         if dep.transport in ("http", "sse", "streamable-http"):
             # Build as a remote endpoint
@@ -620,8 +621,15 @@ class MCPIntegrator:
             )
 
         if "copilot" in target_runtimes:
+            from apm_cli.factory import ClientFactory
+
+            copilot_client = ClientFactory.create_client(
+                "copilot",
+                project_root=project_root_path,
+                user_scope=scope is not InstallScope.PROJECT,
+            )
             _clean_json_mcp_config(
-                Path.home() / ".copilot" / "mcp-config.json",
+                Path(copilot_client.get_config_path()),
                 expanded_stale,
                 logger,
                 "Copilot CLI config",
@@ -850,8 +858,7 @@ class MCPIntegrator:
             ):
                 _log.debug("MCP lockfile unchanged -- skipping write")
                 return
-            lockfile.generated_at = datetime.now(timezone.utc).isoformat()
-            lockfile.save(lock_path)
+            lockfile.save(lock_path, existing_lockfile=existing_lockfile)
         except Exception as exc:
             _log.debug(
                 "MCP lockfile persistence failed at %s",

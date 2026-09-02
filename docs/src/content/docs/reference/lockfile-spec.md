@@ -59,7 +59,6 @@ on any machine.
 
 ```yaml
 lockfile_version: "1"
-generated_at: "2026-05-10T20:14:00+00:00"
 apm_version: "0.6.4"
 dependencies:
   - repo_url: https://github.com/acme-corp/security-baseline
@@ -135,7 +134,7 @@ deployments:
 | Field | Type | Required | Notes |
 |---|---|---|---|
 | `lockfile_version` | string | yes | Schema version. `"1"` for plain Git projects; `"2"` when any dependency has `source: "registry"` or Git semver resolution fields (`constraint`, `resolved_tag`, `resolved_at`). |
-| `generated_at` | ISO 8601 string | yes | UTC timestamp of the last write. Ignored by equivalence checks. |
+| _(Deprecated)_ `generated_at` | ISO 8601 string | no | Legacy write timestamp. New lockfiles omit it; when an existing lockfile carries it, APM refreshes it on substantive writes. Ignored by equivalence checks. |
 | `apm_version` | string | no | APM CLI version that wrote the file. Diagnostic only. |
 | `dependencies` | list | yes | Resolved APM packages. See [per-entry fields](#per-entry-fields). |
 | `mcp_servers` | list of strings | no | Names of MCP servers managed as of the last install or update, including transitively contributed servers. |
@@ -211,7 +210,7 @@ Each item in `dependencies` describes one resolved package.
 | `resolved_url` | string | registry only | Fully-qualified download URL used to re-fetch registry archives. |
 | `resolved_hash` | string | registry only | SHA-256 digest of the registry archive bytes, verified on every install. |
 | `local_path` | string | no | Original path from `apm.yml` for local deps, relative to project root. |
-| `content_hash` | string | no | SHA-256 of the local package's source tree. Lets APM detect upstream changes to a path dep. |
+| `content_hash` | string | no | SHA-256 of the materialized package tree, computed from sorted relative paths and raw file bytes. For remote dependencies it verifies that downloaded or cached content still matches the lock; for local path dependencies it detects source-tree changes. |
 | `is_dev` | bool | no | `true` when the dep was declared under `devDependencies`. |
 | `discovered_via` | string | no | Marketplace name that surfaced this package (provenance). |
 | `marketplace_plugin_name` | string | no | Plugin name as listed in that marketplace. |
@@ -329,7 +328,11 @@ shipped.
 
 `apm install` only rewrites the file when its semantic content changes
 (`generated_at` and `apm_version` are ignored when comparing). A no-op install
-leaves the file untouched.
+leaves the file untouched. New lockfiles omit `generated_at` so independent
+dependency changes do not manufacture timestamp conflicts. If a pre-existing
+lockfile includes the field, APM retains it for compatibility and refreshes it
+only on a substantive write. To migrate a legacy lockfile manually, delete the
+`generated_at: ...` line from `apm.lock.yaml` once; APM will not add it back.
 
 ## Drift and integrity
 
@@ -389,7 +392,6 @@ local skill:
 
 ```yaml
 lockfile_version: "1"
-generated_at: "2026-05-10T20:14:00+00:00"
 apm_version: "0.6.4"
 dependencies:
   - repo_url: github.com/octocat/example-skills
