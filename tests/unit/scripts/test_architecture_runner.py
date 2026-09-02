@@ -627,6 +627,7 @@ install-deployment-mcp-ownership-migration
 install-deployment-outcome
 install-deployment-package-target-authorization
 install-deployment-plugin-bin-eligibility
+install-deployment-prospective-dry-run-plan
 install-deployment-provenance-state
 install-deployment-ref-recheck-ownership
 install-deployment-registry-dependency-intent
@@ -648,6 +649,7 @@ marketplace-integrations-generated-bundle-lf-writers
 marketplace-integrations-hash-visible-lf-writers
 marketplace-integrations-legacy-skill-membership
 marketplace-integrations-local-audit-resolution
+marketplace-integrations-metadata-enrichment
 marketplace-integrations-native-registration
 marketplace-integrations-output-path
 marketplace-integrations-package-construction
@@ -694,6 +696,7 @@ transport-platform-github-throttle
 transport-platform-host-credential-resolution
 transport-platform-network-host-parsing
 transport-platform-ref-freshness
+transport-platform-revision-pin-outcome
 transport-platform-runtime-deadline-safety
 transport-platform-self-update-resolution
 transport-platform-sparse-symlink-validation

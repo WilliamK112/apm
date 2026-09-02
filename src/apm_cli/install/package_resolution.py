@@ -43,7 +43,7 @@ def dependency_reference_to_yaml_entry(dep_ref: Any) -> dict:
     return entry
 
 
-def normalize_github_skill_url_packages(
+def normalize_github_skill_urls(
     packages: Any,
 ) -> tuple[tuple[str, ...], dict[str, tuple[str, ...]], list[tuple[str, str]]]:
     """Normalize GitHub ``SKILL.md`` URLs into repo refs plus implicit skills.

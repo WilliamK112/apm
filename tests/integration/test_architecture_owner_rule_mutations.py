@@ -260,6 +260,14 @@ MUTATIONS: tuple[MutationCase, ...] = (
         intent="Effective package-target authorization loses its single resolver.",
     ),
     MutationCase(
+        guard_id="install-deployment-prospective-dry-run-plan",
+        rule_id="install-deployment-prospective-dry-run-plan",
+        path="src/apm_cli/commands/install.py",
+        old="mcp_deps=list(prospective_plan.selected_mcp_dependencies) or None",
+        new="mcp_deps=mcp_deps if should_install_mcp else None",
+        intent="Dry-run policy checks bypass the plan-owned MCP selection.",
+    ),
+    MutationCase(
         guard_id="install-deployment-provenance-state",
         rule_id="install-deployment-provenance-state",
         path="src/apm_cli/commands/prune.py",
@@ -346,6 +354,14 @@ MUTATIONS: tuple[MutationCase, ...] = (
         old="def normalized_plugin_skill_sources(",
         new="def normalized_plugin_skill_sources_X(",
         intent="Legacy plugin skill membership loses its normalization owner.",
+    ),
+    MutationCase(
+        guard_id="marketplace-integrations-metadata-enrichment",
+        rule_id="marketplace-integrations-metadata-enrichment",
+        path="src/apm_cli/marketplace/builder.py",
+        old="class MetadataEnrichmentResult(",
+        new="class MetadataEnrichmentResultX(",
+        intent="Marketplace metadata enrichment loses its canonical certification result.",
     ),
     MutationCase(
         guard_id="marketplace-integrations-native-registration",
@@ -538,6 +554,14 @@ MUTATIONS: tuple[MutationCase, ...] = (
         old="if not freshness_policy.allows_lock_seed:",
         new="if ctx.update_refs or ctx.refresh:",
         intent="Ref seeding makes a parallel freshness decision outside RefFreshnessPolicy.",
+    ),
+    MutationCase(
+        guard_id="transport-platform-revision-pin-outcome",
+        rule_id="transport-platform-revision-pin-outcome",
+        path="src/apm_cli/commands/update.py",
+        old="logger.revision_pins_retained(resolution.skips)",
+        new="logger.revision_pins_retained(())",
+        intent="Update discards resolver-provided retained revision pins.",
     ),
     MutationCase(
         guard_id="transport-platform-self-update-resolution",

@@ -834,6 +834,29 @@ class TestValidateAndAddPackagesToApmYml:
             }
         ]
 
+    def test_github_skill_url_dry_run_previews_subset_without_writing(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        manifest = tmp_path / "apm.yml"
+        self._write_apm_yml(manifest)
+        manifest_before = manifest.read_bytes()
+        url = "https://github.com/mattpocock/skills/blob/main/skills/productivity/handoff/SKILL.md"
+
+        with patch("apm_cli.commands.install._validate_package_exists", return_value=True):
+            result, outcome = _validate_and_add_packages_to_apm_yml(
+                packages=[url],
+                dry_run=True,
+                manifest_path=manifest,
+            )
+
+        assert result == ["mattpocock/skills#main"]
+        assert outcome.invalid == []
+        assert manifest.read_bytes() == manifest_before
+        assert outcome.prospective_package is not None
+        prospective = outcome.prospective_package.get_apm_dependencies()
+        assert len(prospective) == 1
+        assert prospective[0].to_canonical() == "mattpocock/skills#main"
+        assert prospective[0].skill_subset == ["productivity/handoff"]
+
     @pytest.mark.parametrize("scheme", ["http", "https"])
     def test_raw_github_skill_url_updates_existing_manifest(self, tmp_path, monkeypatch, scheme):
         monkeypatch.chdir(tmp_path)

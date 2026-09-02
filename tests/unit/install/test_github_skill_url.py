@@ -6,7 +6,7 @@ import pytest
 
 from apm_cli.install.package_resolution import (
     normalize_github_skill_url_package,
-    normalize_github_skill_url_packages,
+    normalize_github_skill_urls,
 )
 
 
@@ -97,8 +97,8 @@ def test_normalize_github_skill_url_package_rejects_malformed_paths(url, message
         normalize_github_skill_url_package(url)
 
 
-def test_normalize_github_skill_url_packages_combines_per_repo_skills():
-    packages, skill_subsets, invalid = normalize_github_skill_url_packages(
+def test_normalize_github_skill_urls_combines_per_repo_skills():
+    packages, skill_subsets, invalid = normalize_github_skill_urls(
         [
             "https://github.com/owner/repo/blob/main/skills/review/SKILL.md",
             "https://github.com/owner/repo/blob/main/skills/productivity/handoff/SKILL.md",
