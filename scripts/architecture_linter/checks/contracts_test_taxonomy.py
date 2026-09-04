@@ -66,6 +66,9 @@ _GUARD_APPLY_TO = "contracts-tooling-apply-to-placement"
 _GUARD_FRONTMATTER = "contracts-tooling-frontmatter-yaml"
 
 
+_GUARD_PROJECT_YAML_WRITES = "contracts-tooling-project-yaml-write-delegation"
+
+
 _GUARD_LOCKFILE_READ = "contracts-tooling-lockfile-read"
 
 
@@ -446,7 +449,7 @@ _RESOLVE_PHASE = "src/apm_cli/install/phases/resolve.py"
 
 
 def check_dependency_identity(provider: FactsProvider) -> tuple[Violation, ...]:
-    """Identity may casefold only in identity.py; materialization preserves casing."""
+    """Guard dependency identity, materialization, and embedded-subpath ownership."""
     rule_id = _GUARD_DEPENDENCY_IDENTITY
     identity, identity_fail = _facts_for(provider, _IDENTITY_OWNER, rule_id)
     materialization, mat_fail = _facts_for(provider, _MATERIALIZATION_OWNER, rule_id)
@@ -496,6 +499,42 @@ def check_dependency_identity(provider: FactsProvider) -> tuple[Violation, ...]:
                 rule_id,
                 _IDENTITY_OWNER,
                 "Package identity casing must route through is_github_hostname",
+            )
+        )
+    embedded_subpath_body = _awk_body(
+        reference,
+        re.compile(r"^    def _check_no_embedded_subpath\("),
+        re.compile(r"^    def "),
+    )
+    embedded_subpath_message = (
+        "Embedded git URL subpath validation must use DependencyReference and host_providers"
+    )
+    if not _body_has(embedded_subpath_body, "classify_host_provider(") or not _body_has(
+        embedded_subpath_body, 'provider.kind == "gitlab"'
+    ):
+        findings.append(
+            _summary(
+                rule_id,
+                _REFERENCE_OWNER,
+                embedded_subpath_message,
+            )
+        )
+    primitive_dirs = re.compile(r"_APM_PRIMITIVE_DIRS")
+    for path in _python_paths(provider, _SRC_PREFIX):
+        if path == _REFERENCE_OWNER:
+            continue
+        facts, path_failures = _facts_for(provider, path, rule_id)
+        findings.extend(path_failures)
+        if path_failures:
+            continue
+        findings.extend(
+            _line_findings(
+                facts,
+                path,
+                rule_id,
+                primitive_dirs,
+                embedded_subpath_message,
+                respect_exempt=True,
             )
         )
     return tuple(findings)
@@ -719,6 +758,7 @@ _FRONTMATTER_OWNER = "src/apm_cli/utils/yaml_io.py"
 _INSTRUCTION_INTEGRATOR = "src/apm_cli/integration/instruction_integrator.py"
 _CONTENT_SCANNER = "src/apm_cli/security/content_scanner.py"
 _INSTALL_SERVICES = "src/apm_cli/install/services.py"
+_REVISION_PINS = "src/apm_cli/deps/revision_pins.py"
 _FRONTMATTER_METHODS = frozenset({"load", "loads", "parse"})
 
 
@@ -1147,6 +1187,36 @@ def check_frontmatter_yaml(provider: FactsProvider) -> tuple[Violation, ...]:
     return tuple(findings)
 
 
+def check_project_yaml_write_delegation(provider: FactsProvider) -> tuple[Violation, ...]:
+    """Project YAML writers must delegate to the canonical text-write owner."""
+    rule_id = _GUARD_PROJECT_YAML_WRITES
+    contracts = (
+        (_FRONTMATTER_OWNER, "dump_yaml_roundtrip", "write_text_lf"),
+        (_FRONTMATTER_OWNER, "write_yaml_text_atomic", "atomic_write_text"),
+        (_REVISION_PINS, "apply_revision_pin_updates", "write_yaml_text_atomic"),
+    )
+    findings: list[Violation] = []
+    for path, function_name, delegate in contracts:
+        facts, failures = _facts_for(provider, path, rule_id)
+        findings.extend(failures)
+        if failures or facts.tree_index is None:
+            continue
+        function = facts.tree_index.function(function_name)
+        if function is None:
+            findings.append(_summary(rule_id, path, f"missing project YAML writer {function_name}"))
+            continue
+        calls = _named_calls(facts.tree_index.own_scope(function), delegate)
+        if len(calls) != 1:
+            findings.append(
+                _summary(
+                    rule_id,
+                    path,
+                    f"{function_name} must call {delegate} exactly once",
+                )
+            )
+    return tuple(findings)
+
+
 _LIFECYCLE_CONTRACT = "tests/quality/test_ci_topology.py"
 
 
@@ -1229,7 +1299,7 @@ RULES: tuple[Rule, ...] = (
     ),
     _owner_rule(
         _GUARD_DEPENDENCY_IDENTITY,
-        "Dependency comparison identity casefolds only in identity.py; materialization preserves casing.",
+        "Dependency identity, materialization, and embedded git URL subpaths have canonical owners.",
         check_dependency_identity,
     ),
     _owner_rule(
@@ -1246,6 +1316,11 @@ RULES: tuple[Rule, ...] = (
         _GUARD_FRONTMATTER,
         "Frontmatter delimiter detection, BOM decoding, and bounded YAML parsing stay owned by utils/yaml_io.py.",
         check_frontmatter_yaml,
+    ),
+    _owner_rule(
+        _GUARD_PROJECT_YAML_WRITES,
+        "Project YAML writes route through the canonical deterministic text writers.",
+        check_project_yaml_write_delegation,
     ),
     _owner_rule(
         _GUARD_LOCKFILE_READ,

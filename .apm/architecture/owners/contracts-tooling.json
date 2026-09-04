@@ -3,8 +3,8 @@
   "owners": [
     {
       "id": "dependency-identity-materialization",
-      "decision": "Dependency comparison identity vs display-cased materialization path",
-      "owner": "models/dependency/identity.py + materialization.py + DependencyReference",
+      "decision": "Dependency comparison identity vs display-cased materialization path; embedded git URL subpath validation",
+      "owner": "models/dependency/identity.py + materialization.py + DependencyReference (_check_no_embedded_subpath consumes core/host_providers.py)",
       "selectors": [
         "src/apm_cli/models/dependency/identity.py",
         "src/apm_cli/models/dependency/materialization.py",
@@ -35,6 +35,13 @@
       "owner": "utils/yaml_io.py (load_frontmatter, loads_frontmatter, _BoundedYAMLHandler)",
       "selectors": ["src/apm_cli/utils/yaml_io.py"],
       "guards": ["contracts-tooling-frontmatter-yaml"]
+    },
+    {
+      "id": "deterministic-atomic-text-writes",
+      "decision": "Deterministic UTF-8 text writes and atomic replacement",
+      "owner": "utils/atomic_io.py (write_text_lf, atomic_write_text)",
+      "selectors": ["src/apm_cli/utils/atomic_io.py"],
+      "guards": ["contracts-tooling-project-yaml-write-delegation"]
     },
     {
       "id": "read-only-lockfile-path",
