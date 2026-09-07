@@ -7,13 +7,13 @@ import threading
 from collections import deque
 from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import replace
+from dataclasses import fields, is_dataclass, replace
 from pathlib import Path, PureWindowsPath
 from typing import TYPE_CHECKING, NoReturn, Optional, Protocol
 
 from ..bundle.local_bundle import route_agent_plugin_package
 from ..models.apm_package import APMPackage, DependencyReference
-from ..models.validation import validate_apm_package
+from ..models.validation import PackageType, detect_package_type, validate_apm_package
 from ..utils.path_security import PathTraversalError, ensure_path_within, validate_path_segments
 from ..utils.paths import portable_relpath
 from ._shared import MarketplaceManifestMaterializationError, materialize_marketplace_manifest
@@ -1226,6 +1226,34 @@ class APMDependencyResolver:
                 had_existing_install,
             )
 
+        package_type, _ = detect_package_type(install_path)
+        if package_type is PackageType.MARKETPLACE_PLUGIN:
+            validation = validate_apm_package(
+                install_path,
+                source_path=dep_source_path,
+            )
+            if not validation.is_valid:
+                self._raise_downloaded_package_error(
+                    downloaded_candidate,
+                    dep_ref,
+                    "; ".join(validation.errors),
+                    had_existing_install,
+                )
+            if validation.package is None:
+                self._raise_downloaded_package_error(
+                    downloaded_candidate,
+                    dep_ref,
+                    f"Marketplace Plugin validation produced no package metadata: {install_path}",
+                    had_existing_install,
+                )
+            if not validation.package.source:
+                validation.package.source = dep_ref.repo_url
+            return self._activate_validated_package(
+                validation.package,
+                downloaded_candidate,
+                had_existing_install,
+            )
+
         # Look for apm.yml in the install path
         apm_yml_path = install_path / "apm.yml"
         if not apm_yml_path.exists():
@@ -1315,7 +1343,28 @@ class APMDependencyResolver:
             downloaded_candidate,
             live_path,
         )
+        self._remap_dependency_configs(package, downloaded_candidate, live_path)
         return package
+
+    @staticmethod
+    def _remap_dependency_configs(
+        package: APMPackage,
+        candidate: Path,
+        live_path: Path,
+    ) -> None:
+        """Repoint plugin-root paths that were substituted while staged."""
+        from apm_cli.deps.plugin_parser import rebase_plugin_root_paths
+
+        for group in (package.dependencies, package.dev_dependencies):
+            for entries in (group or {}).values():
+                for entry in entries or ():
+                    if not is_dataclass(entry) or isinstance(entry, type):
+                        continue
+                    for spec in fields(entry):
+                        current = getattr(entry, spec.name, None)
+                        rebased = rebase_plugin_root_paths(current, candidate, live_path)
+                        if rebased != current:
+                            setattr(entry, spec.name, rebased)
 
     @staticmethod
     def _raise_downloaded_package_error(
