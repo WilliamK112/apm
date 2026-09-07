@@ -131,6 +131,15 @@ in `apm.yml`, then run `apm install` again.
   replacements to isolated staging paths and validate them before publication.
   If download, validation, or activation fails, APM keeps the previous package
   and lockfile active and exits non-zero with retry guidance.
+- **Git-hook isolation.** Dependency Git operations ignore repository-locating
+  hook variables, preserving the caller's branch and HEAD. APM allows safe URL
+  rewrites but rejects credentials, insecure transports including `http://` and
+  `git://`, remote-helper syntax such as `ext::` and `https::`, and cross-host
+  network targets for every host class. Credentials are resolved per
+  `(host, port, org)`; private `github.com` helper fallback also uses the
+  repository path. Managed and anonymous HTTPS auth is scoped to the effective
+  repository URL. See
+  [Git URL rewrite safety](../../../getting-started/authentication/#git-url-rewrite-safety).
 - **Instruction frontmatter preflight.** Malformed YAML always rejects the
   package before any of its primitives are deployed. Critical hidden characters
   decoded from metadata also prevent installation by default; `--force`
@@ -293,7 +302,7 @@ See [Registries](../../../guides/registries/) for the full setup guide.
 ## Related
 
 - [`apm update`](../update/) -- refresh dependencies in `apm.yml` to their latest matching versions or refs, with a consent gate.
-- [`apm self-update`](../self-update/) -- upgrade the `apm` CLI binary itself.
+- [CLI upgrades](../../../consumer/update-and-refresh/#update-the-apm-cli-binary) -- use your package manager, or `apm self-update` for standalone installs.
 - [`apm prune`](../prune/) -- remove orphaned packages and stale files.
 - [Registries](../../../guides/registries/) -- end-to-end guide for registry-sourced dependencies.
 - [`apm audit`](../audit/) -- explicit security reporting and remediation after install.

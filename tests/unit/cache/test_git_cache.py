@@ -1,13 +1,45 @@
 """Tests for persistent git cache."""
 
+import errno
 import os
+import shutil
 import time
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from apm_cli.cache.git_cache import GitCache
+from apm_cli.cache.git_cache import CachePruneError, GitCache
+
+
+@pytest.mark.windows_compat
+def test_prune_reports_only_completed_deletions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A denied removal is not counted, and other stale entries still prune."""
+    cache = GitCache(tmp_path)
+    blocked = cache._checkouts_root / "fixture" / ("a" * 40)
+    removable = blocked.with_name("b" * 40)
+    for path in (blocked, removable):
+        path.mkdir(parents=True)
+        (path / "payload").write_bytes(b"preserve on failure")
+        os.utime(path, (1, 1))
+    original = shutil.rmtree
+
+    def remove(path: str, **kwargs: object) -> None:
+        if Path(path) == blocked:
+            raise PermissionError(errno.EACCES, "fixture removal denied", path)
+        original(path, **kwargs)
+
+    monkeypatch.setattr(shutil, "rmtree", remove)
+    with pytest.raises(CachePruneError, match="1 failed") as caught:
+        cache.prune()
+    assert caught.value.pruned == 1
+    assert len(caught.value.failures) == 1
+    assert caught.value.failures[0][0] == blocked
+    assert caught.value.failures[0][1].errno == errno.EACCES
+    assert (blocked / "payload").read_bytes() == b"preserve on failure"
+    assert not removable.exists()
 
 
 class TestGitCacheInit:
@@ -219,9 +251,11 @@ class TestGitCacheEnvForwarding:
         sha = "d" * 40
         mock_run.return_value = MagicMock(returncode=0, stdout=f"{sha}\trefs/heads/main\n")
         cache._resolve_sha("https://github.com/owner/repo", "main", env=sentinel)
-        # Assert env was passed through verbatim
+        # The cache must preserve auth values while returning a sanitized copy.
         call_kwargs = mock_run.call_args.kwargs
-        assert call_kwargs.get("env") is sentinel
+        child_env = call_kwargs["env"]
+        assert all(child_env.get(key) == value for key, value in sentinel.items())
+        assert child_env is not sentinel
 
     @patch("subprocess.run")
     def test_env_forwarded_to_get_checkout_miss(self, mock_run: MagicMock, tmp_path: Path) -> None:
@@ -255,12 +289,14 @@ class TestGitCacheEnvForwarding:
                 "https://github.com/owner/repo", "main", locked_sha=sha, env=sentinel
             )
 
-        # Every subprocess call should carry the sentinel env
+        # Every subprocess call should carry a sanitized copy of the sentinel env.
         assert mock_run.called
         for call in mock_run.call_args_list:
-            assert call.kwargs.get("env") is sentinel, (
+            child_env = call.kwargs.get("env", {})
+            assert all(child_env.get(key) == value for key, value in sentinel.items()), (
                 f"env not forwarded to: {call.args[0] if call.args else call.kwargs.get('args')}"
             )
+            assert child_env is not sentinel
 
 
 class TestCheckoutWriteDedup:

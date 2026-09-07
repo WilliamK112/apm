@@ -1,7 +1,7 @@
 """Manifest (apm.yml) + scheme + tag + conformance-class tests.
 
-Covers req-mf-001..024, req-ext-001..002, req-sc-001..014,
-req-tg-001..014, req-cf-001..002.
+Covers req-mf-001..024, req-ext-001..002, req-sc-001..015,
+req-tg-001..015, req-cf-001..002.
 
 Every requirement is exercised either by (a) schema validation
 against shipped fixtures (positive + negative), (b) a verbatim

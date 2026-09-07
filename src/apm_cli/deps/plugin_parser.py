@@ -353,6 +353,13 @@ def normalized_plugin_skill_sources(plugin_path: Path) -> tuple[dict[str, Path],
     return resolved, declared
 
 
+def has_normalized_plugin_skill_sources_receipt(plugin_path: Path) -> bool:
+    """Return whether parser-owned plugin skill membership is present."""
+    apm_dir = plugin_path.resolve() / ".apm"
+    receipt = apm_dir / _PLUGIN_SKILL_SOURCES_FILE
+    return not apm_dir.is_symlink() and receipt.is_file() and not receipt.is_symlink()
+
+
 def _write_plugin_skill_sources(
     plugin_path: Path,
     apm_dir: Path,
@@ -480,7 +487,10 @@ def normalize_plugin_directory(plugin_path: Path, plugin_json_path: Path | None 
     ):
         manifest = parse_plugin_manifest(plugin_json_path)
         from ..agent_plugins.errors import AgentPluginLegacyBoundaryError
-        from ..bundle.local_bundle import PluginSchemaRoute, classify_plugin_manifest_schema
+        from ..install.primitive_classification import (
+            PluginSchemaRoute,
+            classify_plugin_manifest_schema,
+        )
 
         if classify_plugin_manifest_schema(manifest) is PluginSchemaRoute.AGENT_PLUGIN:
             raise AgentPluginLegacyBoundaryError(
@@ -494,7 +504,13 @@ def normalize_plugin_directory(plugin_path: Path, plugin_json_path: Path | None 
             raise ValueError("Present root plugin.json must declare a non-empty name")
         manifest["name"] = plugin_path.name
 
-    return synthesize_apm_yml_from_plugin(plugin_path, manifest)
+    # Keep the generated manifest portable. APMPackage expands the placeholder
+    # when it loads the manifest, using the package's current published root.
+    return synthesize_apm_yml_from_plugin(
+        plugin_path,
+        manifest,
+        substitute_plugin_root=False,
+    )
 
 
 def _validate_declared_component_paths(plugin_path: Path, manifest: dict[str, Any]) -> None:
@@ -766,6 +782,24 @@ def resolve_plugin_root_placeholders(value: Any, plugin_path: Path) -> Any:
         }
     if isinstance(value, list):
         return [resolve_plugin_root_placeholders(item, plugin_path) for item in value]
+    return value
+
+
+def rebase_plugin_root_paths(value: Any, old_root: Path, new_root: Path) -> Any:
+    """Repoint already-substituted plugin-root paths at a new package root.
+
+    Exact inverse of :func:`resolve_plugin_root_placeholders`: the placeholder
+    may sit anywhere in a string and appear more than once, so every occurrence
+    of *old_root* is swapped rather than only a leading path prefix.
+    """
+    if isinstance(value, str):
+        return value.replace(str(old_root), str(new_root))
+    if isinstance(value, dict):
+        return {
+            key: rebase_plugin_root_paths(item, old_root, new_root) for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [rebase_plugin_root_paths(item, old_root, new_root) for item in value]
     return value
 
 

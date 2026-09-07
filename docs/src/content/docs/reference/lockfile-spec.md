@@ -140,7 +140,7 @@ deployments:
 |---|---|---|---|
 | `lockfile_version` | string | yes | Schema version. `"1"` for plain Git projects; `"2"` when any dependency has `source: "registry"` or Git semver resolution fields (`constraint`, `resolved_tag`, `resolved_at`). |
 | _(Deprecated)_ `generated_at` | ISO 8601 string | no | Legacy write timestamp. New lockfiles omit it; when an existing lockfile carries it, APM refreshes it on substantive writes. Ignored by equivalence checks. |
-| `apm_version` | string | no | APM CLI version that wrote the file. Diagnostic only. |
+| `apm_version` | string | no | APM CLI version that wrote the file. Diagnostic except for a narrow compatibility path: exact APM 0.28 metadata, a locked `marketplace_plugin` type, and a matching content hash together authorize the receipt-less cached-plugin upgrade. It never overrides canonical `apm.yml` precedence or applies to freshly fetched dependencies. |
 | `dependencies` | list | yes | Resolved APM packages. See [per-entry fields](#per-entry-fields). |
 | `mcp_servers` | list of strings | no | Names of MCP servers managed as of the last install or update, including transitively contributed servers. |
 | `mcp_configs` | map | no | `server_name -> resolved config dict` baseline used to detect MCP drift. |
@@ -210,7 +210,7 @@ Each item in `dependencies` describes one resolved package.
 | `package_type` | string | no | Kind of package: `apm_package`, `skill_bundle`, `claude_skill`, `hook_package`, `hybrid`, `marketplace_plugin`. Drives target placement. |
 | `skill_subset` | list of strings | no | For dependencies that expose selectable skills: the sorted subset of skill names the manifest selected. Empty means "all". |
 | `target_subset` | list of strings | no | Sorted target names selected by a dependency's `targets:` subset. Empty means "all active install targets". |
-| `deployed_files` | list of strings | no | Project-relative paths APM wrote for this dep. Sorted. Powers `prune` and `audit`'s file-presence check. A shared path has one canonical package owner; uninstall transfers ownership to a surviving provider. When the consumer manifest declares targets, reinstall preserves entries for other declared, gated, or dynamic targets and removes entries outside that target universe. On a target contraction, a normal install/prune run removes an obsolete target's file only when its recorded hash still matches; a user-edited file stays on disk and remains tracked for review. `apm lock` is non-destructive: if bytes remain on disk, the lockfile preserves their `deployed_files`, `deployed_file_hashes`, and deployment-ledger rows until the next normal install can prove and perform cleanup. Without a declared target set, reinstall preserves prior other-target entries. |
+| `deployed_files` | list of strings | no | Sorted project-relative paths APM wrote for this dependency; powers `prune` and `audit`'s file-presence check. Shared paths have one canonical owner; uninstall transfers ownership to a surviving provider. Reinstall preserves other declared, gated, or dynamic targets' entries. On explicit manifest contraction, install/prune removes dropped targets' files only if recorded hashes match; edited files remain tracked on disk. `apm lock` preserves files and their `deployed_files`, `deployed_file_hashes`, and deployment-ledger rows until normal install can verify and perform cleanup. Without `targets:` or `target:` in the consumer's `apm.yml`, reinstall preserves inactive targets' deployed files, merge-hook configuration, and ownership sidecars, even with `--target`. A `--target` override does not declare dropped targets; only explicit manifest contraction permits pruning them. |
 | `deployed_file_hashes` | map | no | `path -> sha256` for the files in `deployed_files`. Powers `audit`'s content-integrity check. Hashed over canonical content -- UTF-8 text is normalized CRLF -> LF (bare CR preserved) so the hash is the same whether git checks the file out with Windows or POSIX line endings; binary is hashed raw. Directory entries (trailing `/`) have no hash. |
 | `exec_status` | string | no | Executable-trust state of this dep's executable primitives, set by the install-time gate via the shared deny-wins resolver. One of `deployed` (trusted and materialized), `gated_pending_approval` (present but parked until approved), `denied` (blocked by an org/user deny), or `absent` (declares no executables). Consumed by `audit`'s `required-executable-untrusted` signal; see [Executable approval](../cli/approve/). |
 | `source` | string | no | `"local"` for path dependencies, `"registry"` for dedicated-registry resolutions. Absent for Git deps. |
@@ -353,7 +353,7 @@ check maps to specific lockfile fields:
 | `ref-consistency` | `resolved_ref` per entry vs. `apm.yml` |
 | `deployed-files-present` | `deployed_files` per entry (and self entry) |
 | `content-integrity` | `deployed_file_hashes` (and `local_deployed_file_hashes`) |
-| `skill-subset-consistency` | `skill_subset` per `skill_bundle` entry |
+| `skill-subset-consistency` | `skill_subset` per entry, matched against `apm.yml` and the resolved package tree |
 | `config-consistency` | `mcp_configs` and `mcp_config_provenance` |
 | `no-orphaned-packages` | `dependencies` keys vs. `apm.yml` |
 
