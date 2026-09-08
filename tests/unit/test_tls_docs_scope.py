@@ -121,7 +121,9 @@ def test_enterprise_security_docs_do_not_claim_transport_aware_policy():
     normalized = " ".join(security.replace("**", "").split())
 
     assert "no dedicated `allow_insecure` field" in normalized
-    assert "scheme- and host-blind canonical package names" in normalized
+    assert "scheme-blind canonical package identities" in normalized
+    assert "non-default hosts are retained" in normalized
+    assert "host-blind" not in normalized
     assert "does not enforce HTTPS" in normalized
     assert "`registry_source.allow_non_registry`" in normalized
     assert "Forbid `allow_insecure: true` via the policy allow list" not in normalized
