@@ -694,6 +694,7 @@ mutation_writes.user_root_scope
 onboarding-metadata-only
 contracts-tooling-root-context-write-eligibility
 registry_delegation.agents_source_attribution
+registry_delegation.apm_home_resolution
 registry_delegation.bootstrap_project_name
 registry_delegation.command_machine_output
 registry_delegation.compile_inventory_authority

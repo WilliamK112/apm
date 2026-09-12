@@ -31,7 +31,7 @@ With no arguments it installs everything from `apm.yml`. With one or more `PACKA
 |---|---|---|
 | `--update` | off | Re-resolve dependencies to the latest version or Git ref allowed by `apm.yml` and rewrite `apm.lock.yaml`. Mutable Git refs must resolve against upstream; APM does not fall back to stale refs from the local bare Git cache. Mutually exclusive with `--frozen`. For interactive use with a confirmation prompt, use [`apm update`](../update/) instead. |
 | `--frozen` | off | Lockfile-only install: refuse to resolve anything new and fail before any project, config, deployment, or cache write if `apm.lock.yaml` is missing or out of sync with `apm.yml`, including MCP state. Mirrors `npm ci`. Mutually exclusive with `--update`, positional package additions, and `--mcp`. |
-| `--dry-run` | off | Print the install plan without deployment writes. Positional packages and ref changes appear in the preview after validation but do not change an existing `apm.yml`. Project auto-bootstrap still keeps its new manifest and any explicit `--target` selection for the next run; global dry-run bootstrap uses temporary preview state and does not create `~/.apm`. The `-g --mcp` path creates no user manifest, lockfile, or runtime configuration. |
+| `--dry-run` | off | Print the install plan without deployment writes. Positional packages and ref changes appear in the preview after validation but do not change an existing `apm.yml`. Project auto-bootstrap still keeps its new manifest and any explicit `--target` selection for the next run; global dry-run bootstrap uses temporary preview state and does not create the APM home (`$APM_HOME`, default `~/.apm`). The `-g --mcp` path creates no user manifest, lockfile, or runtime configuration. |
 | `--force` | off | Overwrite locally-authored files on collision **and** bypass the security scan's critical-finding block. Does **not** suppress general install errors (any reported error still exits `1`, matching npm / pip / cargo) or select ref freshness. Add `--update` or `--refresh` to resolve mutable refs upstream; [`apm update`](../update/) does so with or without `--force`. Use only after independent verification. |
 | `--verbose`, `-v` | off | Show per-file paths and full error context in the diagnostic summary. |
 | `--dev` | off | Add new packages to `devDependencies`. Dev deps install locally but are excluded from `apm pack` output. |
@@ -50,7 +50,7 @@ With no arguments it installs everything from `apm.yml`. With one or more `PACKA
 | `--runtime VALUE` | unset | Legacy alias for `--target` (single value only). Still accepted; prefer `--target`. |
 | `--exclude VALUE` | unset | Skip one runtime from the resolved MCP/LSP target set (explicit selection, manifest, saved config, or auto-detection). |
 | `--only apm\|mcp` | both | Install only APM packages or MCP/LSP service dependencies. Use `--only=apm` to skip service configuration and `--only=mcp` to select MCP and LSP services only. |
-| `-g`, `--global` | off | Install to user scope (`~/.apm/`) instead of the current project. `apm install -g --mcp NAME` creates or updates `~/.apm/apm.yml`, then deploys only to global-capable runtimes, such as Copilot CLI, Claude Code, Codex CLI, Gemini CLI, Antigravity CLI, Hermes, Kiro, Windsurf, and JetBrains Copilot. Mixed selections skip workspace-only targets with a warning. A selection with no global-capable target exits `2` before changing the user manifest, lockfile, or runtime configuration. |
+| `-g`, `--global` | off | Install to user scope under the APM home (`$APM_HOME`, default `~/.apm`) instead of the current project. `apm install -g --mcp NAME` creates or updates `$APM_HOME/apm.yml`, then deploys only to global-capable runtimes, such as Copilot CLI, Claude Code, Codex CLI, Gemini CLI, Antigravity CLI, Hermes, Kiro, Windsurf, and JetBrains Copilot. `APM_HOME` changes metadata paths only; target files still use their target-specific home variables or the operating-system home. Mixed selections skip workspace-only targets with a warning. A selection with no global-capable target exits `2` before changing the user manifest, lockfile, or runtime configuration. |
 | `--legacy-skill-paths` | off | Deploy skills to per-client paths (`.cursor/skills/`, `.github/skills/`, ...) instead of the converged `.agents/skills/`. Env: `APM_LEGACY_SKILL_PATHS=1`. |
 
 File primitives resolve targets in this order: `--target`, manifest
@@ -116,7 +116,7 @@ in `apm.yml`, then run `apm install` again.
 
 ## Behavior
 
-- **Auto-bootstrap.** `apm install <pkg>` with no `apm.yml` creates a minimal one. Its name comes from the current directory (or home directory for global installs) and falls back to `my-project` if that derived name is invalid. `apm install --dry-run -g <pkg>` validates through a temporary manifest when `~/.apm/apm.yml` is absent, reports the real user manifest path, and leaves `~/.apm` uncreated. If `~/.apm/apm.yml` already exists, global dry-run reads it in place without writing changes. Bare `apm install` with no `apm.yml` exits with a hint to run `apm init` or `apm install <org/repo>`.
+- **Auto-bootstrap.** `apm install <pkg>` with no `apm.yml` creates a minimal one. Its name comes from the current directory (or home directory for global installs) and falls back to `my-project` if that derived name is invalid. `apm install --dry-run -g <pkg>` validates through a temporary manifest when `$APM_HOME/apm.yml` is absent (`~/.apm/apm.yml` by default), reports the real user manifest path, and leaves the APM home uncreated. If the user manifest already exists, global dry-run reads it in place without writing changes. Bare `apm install` with no `apm.yml` exits with a hint to run `apm init` or `apm install <org/repo>`.
 - **Target persistence on bootstrap.** When `--target` maps to recognized manifest targets, those target(s) are persisted to the new manifest's `targets:` field so a later bare `apm update` redeploys to the same targets without re-specifying `--target`. For absent user manifests, `apm install --dry-run -g --target ... <pkg>` previews that target field but does not write it.
 - **One effective target.** Package primitives, MCP servers, and LSP servers consume one target decision per invocation: `--target` > `apm.yml targets:` > `apm config set target ...` > auto-detect. A saved target therefore applies to `apm install`, `apm install --mcp`, and later `apm update` runs without another flag.
 - **Claude LSP discovery.** Project installs write the APM-managed plugin at
@@ -168,7 +168,7 @@ in `apm.yml`, then run `apm install` again.
 - **Diagnostic summary.** Output is grouped at the end (collisions, replacements, warnings, errors) instead of inline. Use `--verbose` to expand individual file paths.
 - **Unresolved hook roots.** A hook command that leaves a supported `${PLUGIN_ROOT}` alias unresolved emits a warning naming the package and a concrete repair. Balance quotes around the complete package-relative path, keep it inside the package, then run `apm install` again. See [Hooks and commands](../../../producer/author-primitives/hooks-and-commands/#hooks) for accepted quoting forms.
 - **Declared plugin components.** Every path explicitly listed under a recognized plugin manifest's `agents`, `skills`, `commands`, or `hooks` field must resolve inside that plugin root. A missing or escaping path fails before deployment and lockfile commit; remove the declaration or add the component, then reinstall. Omitted fields and empty lists remain valid.
-- **Default registry routing.** When a default registry is configured (project `registries.default` in `apm.yml` or `registry.<name>.default true` in `~/.apm/config.json`), unscoped `owner/repo#ref` shorthand deps passed to `apm install` route to the registry instead of GitHub. A `#<version>` selector is required; omitting it exits `1`. The selector may be a semver range (`^1.0.0`), an exact version (`1.2.3`), or a non-semver label (`main`, `stable`, `v1.4.2`) -- the registry exact-matches non-semver selectors against its published version list. GitHub probe is skipped for these deps; use the `git:` URL form in `apm.yml` to force the GitHub path (e.g., `- git: https://github.com/owner/repo.git`).
+- **Default registry routing.** When a default registry is configured (project `registries.default` in `apm.yml` or `registry.<name>.default true` in `$APM_HOME/config.json`), unscoped `owner/repo#ref` shorthand deps passed to `apm install` route to the registry instead of GitHub. A `#<version>` selector is required; omitting it exits `1`. The selector may be a semver range (`^1.0.0`), an exact version (`1.2.3`), or a non-semver label (`main`, `stable`, `v1.4.2`) -- the registry exact-matches non-semver selectors against its published version list. GitHub probe is skipped for these deps; use the `git:` URL form in `apm.yml` to force the GitHub path (e.g., `- git: https://github.com/owner/repo.git`).
 
 ## Examples
 
@@ -224,7 +224,7 @@ apm install microsoft/apm-sample-package --dry-run
 apm install -g microsoft/apm-sample-package --dry-run
 ```
 
-With `-g`, an absent `~/.apm` remains uncreated while APM previews the user-scope install.
+With `-g`, an absent APM home (`$APM_HOME`, default `~/.apm`) remains uncreated while APM previews the user-scope install.
 
 ### Redirect writes to a scratch directory
 
@@ -280,7 +280,9 @@ apm install owner/skill-bundle --skill '*'         # reset to all skills
 
 ### Install from a private registry (experimental)
 
-Enable the feature, configure the registry (in `apm.yml` and/or `~/.apm/config.json`), and run install normally. APM resolves registry-sourced deps alongside git deps:
+Enable the feature, configure the registry (in `apm.yml` and/or
+`$APM_HOME/config.json`), and run install normally. APM resolves registry-sourced
+deps alongside git deps:
 
 ```bash
 apm experimental enable registries

@@ -593,6 +593,22 @@ MUTATIONS: tuple[MutationCase, ...] = (
         intent="Local marketplace version precedence skips the plugin.json fallback read.",
     ),
     MutationCase(
+        guard_id="onboarding-metadata-only",
+        rule_id="onboarding-metadata-only",
+        path="src/apm_cli/adopt/discovery.py",
+        old="admission = validate_apm_package(path, read_only=True)",
+        new="admission = validate_apm_package(path, read_only=False)",
+        intent="Onboarding package admission stops enforcing read-only validation.",
+    ),
+    MutationCase(
+        guard_id="registry-delegation-apm-home-resolution",
+        rule_id="registry_delegation.apm_home_resolution",
+        path="src/apm_cli/core/scope.py",
+        old='configured = os.environ.get("APM_HOME")',
+        new='configured = os.environ.get("APM_ROOT")',
+        intent="APM user metadata stops reading its canonical environment variable.",
+    ),
+    MutationCase(
         guard_id="registry-delegation-bootstrap-project-name",
         rule_id="registry_delegation.bootstrap_project_name",
         path="src/apm_cli/core/project_name.py",

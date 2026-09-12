@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `APM_HOME` now consistently controls global manifests, lockfiles, modules, configuration, lifecycle trust, logs, and command locking while leaving target deployment destinations under their target-specific overrides or the operating-system home. (closes #2884)
 - GitLab `path:` dependencies now preserve the selected SSH transport, username, and port instead of silently using HTTPS; REST fallback requires an executed same-origin HTTPS attempt admitted by the transport policy. (#2938)
 
 ## [0.30.0] - 2026-09-07
