@@ -596,10 +596,10 @@ For an org standardizing on APM:
 - Route dep traffic through an enterprise proxy with audit logging. See [Registry Proxy & Air-gapped](../registry-proxy/).
 - Treat insecure transport as a separate CI control. `apm-policy.yml` has no
   dedicated `allow_insecure` field: `dependencies.allow` and
-  `dependencies.deny` match scheme-blind canonical package identities. The
-  default `github.com` host is omitted while non-default hosts are retained, so
-  rules can restrict package and host identity but cannot distinguish
-  `http://` from `https://` for the same canonical host and path. Reject committed
+  `dependencies.deny` match scheme-blind, host-blind canonical package identities
+  (for example `owner/repo`, not `github.com/owner/repo`). Policy patterns cannot
+  restrict host identity and cannot distinguish `http://` from `https://` for the
+  same package path. Reject committed
   `allow_insecure: true` entries and prohibit `--allow-insecure` and
   `--allow-insecure-host` in standard CI; review both explicit gates for any
   air-gapped exception. `registry_source.allow_non_registry` is a separate
